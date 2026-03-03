@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import api from '../services/api';
 
 const AppointmentContext = createContext(null);
@@ -6,29 +6,29 @@ const AppointmentContext = createContext(null);
 export function AppointmentProvider({ children }) {
   const [appointments, setAppointments] = useState([]);
 
-  const loadMyAppointments = async () => {
+  const loadMyAppointments = useCallback(async () => {
     const { data } = await api.get('/appointments/my/');
     setAppointments(data);
-  };
+  }, []);
 
-  const createAppointment = async (payload) => {
+  const createAppointment = useCallback(async (payload) => {
     await api.post('/appointments/create/', payload);
-  };
+  }, []);
 
-  const updateAppointment = async (id, payload) => {
+  const updateAppointment = useCallback(async (id, payload) => {
     await api.patch(`/appointments/update/${id}/`, payload);
     await loadMyAppointments();
-  };
+  }, [loadMyAppointments]);
 
-  const deleteAppointment = async (id) => {
+  const deleteAppointment = useCallback(async (id) => {
     await api.delete(`/appointments/delete/${id}/`);
     await loadMyAppointments();
-  };
+  }, [loadMyAppointments]);
 
-  const deleteAppointmentsBulk = async (ids) => {
+  const deleteAppointmentsBulk = useCallback(async (ids) => {
     await Promise.all(ids.map((id) => api.delete(`/appointments/delete/${id}/`)));
     await loadMyAppointments();
-  };
+  }, [loadMyAppointments]);
 
   const value = useMemo(
     () => ({

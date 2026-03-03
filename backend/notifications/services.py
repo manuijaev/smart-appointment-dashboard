@@ -2,6 +2,8 @@ import requests
 from django.conf import settings
 from django.core.mail import get_connection
 from django.core.mail import send_mail
+from google.auth.transport.requests import Request
+from google.oauth2 import service_account
 
 
 def _build_email_connection():
@@ -54,10 +56,16 @@ def send_appointment_response_email(visitor_email, visitor_name, status, respons
 
 
 def send_fcm_push_notification(fcm_token, title, body):
-    if not settings.FIREBASE_SERVER_KEY:
-        return {'sent': False, 'reason': 'missing_firebase_server_key'}
     if not fcm_token:
         return {'sent': False, 'reason': 'missing_staff_fcm_token'}
+
+    # Prefer modern FCM HTTP v1 when service-account credentials are configured.
+    if settings.FIREBASE_PROJECT_ID and settings.FIREBASE_CLIENT_EMAIL and settings.FIREBASE_PRIVATE_KEY:
+        return _send_fcm_push_notification_v1(fcm_token, title, body)
+
+    # Fallback to legacy server-key auth if still configured.
+    if not settings.FIREBASE_SERVER_KEY:
+        return {'sent': False, 'reason': 'missing_firebase_credentials'}
 
     headers = {
         'Authorization': f'key={settings.FIREBASE_SERVER_KEY}',
@@ -83,3 +91,55 @@ def send_fcm_push_notification(fcm_token, title, body):
         }
     except requests.RequestException:
         return {'sent': False, 'reason': 'firebase_request_exception'}
+
+
+def _send_fcm_push_notification_v1(fcm_token, title, body):
+    credentials_info = {
+        'type': 'service_account',
+        'project_id': settings.FIREBASE_PROJECT_ID,
+        'private_key': settings.FIREBASE_PRIVATE_KEY,
+        'client_email': settings.FIREBASE_CLIENT_EMAIL,
+        'token_uri': 'https://oauth2.googleapis.com/token',
+    }
+
+    credentials = service_account.Credentials.from_service_account_info(
+        credentials_info,
+        scopes=['https://www.googleapis.com/auth/firebase.messaging'],
+    )
+    credentials.refresh(Request())
+
+    headers = {
+        'Authorization': f'Bearer {credentials.token}',
+        'Content-Type': 'application/json; charset=UTF-8',
+    }
+    payload = {
+        'message': {
+            'token': fcm_token,
+            'notification': {
+                'title': title,
+                'body': body,
+            },
+            'webpush': {
+                'notification': {
+                    'title': title,
+                    'body': body,
+                    'icon': '/icons/icon-192.png',
+                }
+            },
+        }
+    }
+
+    url = f'https://fcm.googleapis.com/v1/projects/{settings.FIREBASE_PROJECT_ID}/messages:send'
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        if response.ok:
+            return {'sent': True, 'status_code': response.status_code, 'api': 'fcm_v1'}
+        return {
+            'sent': False,
+            'reason': 'firebase_send_failed',
+            'status_code': response.status_code,
+            'body': response.text[:500],
+            'api': 'fcm_v1',
+        }
+    except requests.RequestException:
+        return {'sent': False, 'reason': 'firebase_request_exception', 'api': 'fcm_v1'}

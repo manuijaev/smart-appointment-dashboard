@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useAppointments } from '../context/AppointmentContext';
+import { useNotification } from '../context/NotificationContext';
 import ConfirmModal from '../components/ConfirmModal';
 import { sendVisitorResponseEmail } from '../services/emailjs';
 
@@ -10,6 +11,7 @@ const RESPONSE_LOOP_STORAGE_KEY = 'staff_response_loop_enabled_ids';
 export default function StaffDashboardPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { registerDevice, subscribeToForegroundMessages } = useNotification();
   const { appointments, loadMyAppointments, updateAppointment, deleteAppointment, deleteAppointmentsBulk } = useAppointments();
   const [responseNote, setResponseNote] = useState({});
   const [pendingStatusUpdate, setPendingStatusUpdate] = useState(null);
@@ -30,6 +32,31 @@ export default function StaffDashboardPage() {
       setError('Session expired. Please log in again.');
     });
   }, []);
+
+  useEffect(() => {
+    registerDevice().catch(() => {});
+  }, [registerDevice]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      loadMyAppointments().catch(() => {});
+    }, 8000);
+    return () => clearInterval(intervalId);
+  }, [loadMyAppointments]);
+
+  useEffect(() => {
+    let unsubscribe = () => {};
+    subscribeToForegroundMessages((payload) => {
+      const title = payload?.notification?.title || 'New update';
+      const body = payload?.notification?.body || 'A new appointment update is available.';
+      setToast(`${title}: ${body}`);
+      setTimeout(() => setToast(''), 4000);
+      loadMyAppointments().catch(() => {});
+    }).then((unsub) => {
+      if (typeof unsub === 'function') unsubscribe = unsub;
+    }).catch(() => {});
+    return () => unsubscribe();
+  }, [subscribeToForegroundMessages, loadMyAppointments]);
 
   useEffect(() => {
     document.body.classList.add('dashboard-background');

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -35,7 +35,7 @@ export default function AdminDashboardPage() {
     action: null,
   });
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     const [depRes, divRes, staffRes] = await Promise.all([
       api.get('/departments/'),
       api.get('/divisions/'),
@@ -44,11 +44,18 @@ export default function AdminDashboardPage() {
     setDepartments(depRes.data);
     setDivisions(divRes.data);
     setStaff(staffRes.data);
-  };
+  }, []);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      loadData().catch(() => {});
+    }, 10000);
+    return () => clearInterval(intervalId);
+  }, [loadData]);
 
   useEffect(() => {
     document.body.classList.add('dashboard-background');

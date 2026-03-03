@@ -1,6 +1,10 @@
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
+  const { user } = useAuth();
+  if (user) return null;
+
   return (
     <nav className="top-nav">
       <div className="top-nav-inner">
@@ -19,12 +23,6 @@ export default function Navbar() {
             className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
           >
             Admin Login
-          </NavLink>
-          <NavLink
-            to="/admin/signup"
-            className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-          >
-            Admin Sign Up
           </NavLink>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function AdminLoginPage() {
@@ -101,12 +101,6 @@ export default function AdminLoginPage() {
               </div>
               {error && <p className="error">{error}</p>}
             </form>
-            <div className="auth-mini-links">
-              <span>Need a new admin account?</span>
-              <Link to="/admin/signup" className="auth-text-link">
-                Create Admin Account
-              </Link>
-            </div>
           </section>
         </div>
       </div>
