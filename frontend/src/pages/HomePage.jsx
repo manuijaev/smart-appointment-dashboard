@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import api from '../services/api';
 import { useAppointments } from '../context/AppointmentContext';
 import { sendAppointmentRequestEmail } from '../services/emailjs';
@@ -25,6 +25,8 @@ export default function HomePage() {
   const [isSuccessView, setIsSuccessView] = useState(false);
   const [inputTouched, setInputTouched] = useState(false);
   const [isStartingBooking, setIsStartingBooking] = useState(false);
+  const activeDepartmentRef = useRef('');
+  const activeDivisionRef = useRef('');
 
   const totalSteps = 7;
   const progressPercent = ((step + 1) / totalSteps) * 100;
@@ -44,19 +46,33 @@ export default function HomePage() {
     if (!form.department) {
       setDivisions([]);
       setForm((prev) => ({ ...prev, division: '', staff_member: '' }));
+      activeDepartmentRef.current = '';
       return;
     }
-    api.get(`/divisions/?department_id=${form.department}`).then(({ data }) => setDivisions(data));
+    activeDepartmentRef.current = String(form.department);
+    api
+      .get(`/divisions/?department_id=${form.department}`)
+      .then(({ data }) => {
+        if (activeDepartmentRef.current !== String(form.department)) return;
+        setDivisions(data);
+      })
+      .catch(() => {});
   }, [form.department]);
 
   useEffect(() => {
     if (!form.department || !form.division) {
       setStaff([]);
+      activeDivisionRef.current = '';
       return;
     }
+    activeDivisionRef.current = String(form.division);
     api
       .get(`/staff/?department_id=${form.department}&division_id=${form.division}`)
-      .then(({ data }) => setStaff(data));
+      .then(({ data }) => {
+        if (activeDivisionRef.current !== String(form.division)) return;
+        setStaff(data);
+      })
+      .catch(() => {});
   }, [form.department, form.division]);
 
   const onChange = (e) => {
@@ -85,7 +101,13 @@ export default function HomePage() {
     }
 
     try {
-      await createAppointment(form);
+      const payload = {
+        ...form,
+        department: Number(form.department),
+        division: Number(form.division),
+        staff_member: Number(form.staff_member),
+      };
+      await createAppointment(payload);
 
       const selectedStaff = staff.find((member) => String(member.id) === String(form.staff_member));
       const selectedDepartment = departments.find((dep) => String(dep.id) === String(form.department));
@@ -124,7 +146,14 @@ export default function HomePage() {
         message: '',
       });
     } catch (err) {
-      const msg = err?.response?.data?.detail || 'Unable to submit appointment request.';
+      const data = err?.response?.data;
+      let msg = data?.detail;
+      if (!msg && data && typeof data === 'object') {
+        const firstKey = Object.keys(data)[0];
+        const firstVal = firstKey ? data[firstKey] : null;
+        msg = Array.isArray(firstVal) ? firstVal[0] : firstVal;
+      }
+      msg = msg || 'Unable to submit appointment request.';
       setError(msg);
     } finally {
       setIsSubmitting(false);
