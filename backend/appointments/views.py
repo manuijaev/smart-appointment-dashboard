@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework import generics, permissions
 from rest_framework.response import Response
 
@@ -5,6 +7,8 @@ from notifications.services import send_appointment_email, send_appointment_resp
 
 from .models import Appointment
 from .serializers import AppointmentCreateSerializer, AppointmentListSerializer, AppointmentUpdateSerializer
+
+logger = logging.getLogger(__name__)
 
 
 class AppointmentCreateView(generics.CreateAPIView):
@@ -63,14 +67,18 @@ class AppointmentUpdateView(generics.UpdateAPIView):
 
     def perform_update(self, serializer):
         appointment = serializer.save()
-        send_appointment_response_email(
-            visitor_email=appointment.visitor_email,
-            visitor_name=appointment.visitor_name,
-            status=appointment.status,
-            response_note=appointment.response_note,
-            appointment_date=appointment.appointment_date,
-            staff_name=appointment.staff_member.full_name,
-        )
+        try:
+            send_appointment_response_email(
+                visitor_email=appointment.visitor_email,
+                visitor_name=appointment.visitor_name,
+                status=appointment.status,
+                response_note=appointment.response_note,
+                appointment_date=appointment.appointment_date,
+                staff_name=appointment.staff_member.full_name,
+            )
+        except Exception:
+            # Do not fail status updates because email notification failed.
+            logger.exception('Failed to send appointment response email for appointment_id=%s', appointment.id)
 
     def update(self, request, *args, **kwargs):
         response = super().update(request, *args, **kwargs)
