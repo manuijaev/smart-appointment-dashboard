@@ -1,6 +1,12 @@
 import requests
 from django.conf import settings
+from django.core.mail import get_connection
 from django.core.mail import send_mail
+
+
+def _build_email_connection():
+    # Keep SMTP failures bounded so web workers do not hang.
+    return get_connection(timeout=getattr(settings, 'EMAIL_TIMEOUT', 8))
 
 
 def send_appointment_email(staff_email, visitor_name, appointment_date, message):
@@ -14,7 +20,14 @@ def send_appointment_email(staff_email, visitor_name, appointment_date, message)
         f'Message: {message or "No message provided."}\n'
     )
 
-    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [staff_email], fail_silently=True)
+    send_mail(
+        subject,
+        body,
+        settings.DEFAULT_FROM_EMAIL,
+        [staff_email],
+        fail_silently=True,
+        connection=_build_email_connection(),
+    )
 
 
 def send_appointment_response_email(visitor_email, visitor_name, status, response_note, appointment_date, staff_name):
@@ -30,7 +43,14 @@ def send_appointment_response_email(visitor_email, visitor_name, status, respons
         f'Staff response:\n{response_note}\n\n'
         'Thank you.'
     )
-    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [visitor_email], fail_silently=True)
+    send_mail(
+        subject,
+        body,
+        settings.DEFAULT_FROM_EMAIL,
+        [visitor_email],
+        fail_silently=True,
+        connection=_build_email_connection(),
+    )
 
 
 def send_fcm_push_notification(fcm_token, title, body):

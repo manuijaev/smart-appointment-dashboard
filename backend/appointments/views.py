@@ -1,4 +1,5 @@
 import logging
+import threading
 
 from rest_framework import generics, permissions
 from rest_framework.response import Response
@@ -9,6 +10,41 @@ from .models import Appointment
 from .serializers import AppointmentCreateSerializer, AppointmentListSerializer, AppointmentUpdateSerializer
 
 logger = logging.getLogger(__name__)
+
+
+def _notify_new_appointment(appointment):
+    try:
+        send_appointment_email(
+            staff_email=appointment.staff_member.email,
+            visitor_name=appointment.visitor_name,
+            appointment_date=appointment.appointment_date,
+            message=appointment.message,
+        )
+    except Exception:
+        logger.exception('Failed to send appointment request email for appointment_id=%s', appointment.id)
+
+    try:
+        send_fcm_push_notification(
+            fcm_token=appointment.staff_member.fcm_token,
+            title='New Appointment Request',
+            body=f'You have a new appointment from {appointment.visitor_name}',
+        )
+    except Exception:
+        logger.exception('Failed to send FCM push for appointment_id=%s', appointment.id)
+
+
+def _notify_appointment_response(appointment):
+    try:
+        send_appointment_response_email(
+            visitor_email=appointment.visitor_email,
+            visitor_name=appointment.visitor_name,
+            status=appointment.status,
+            response_note=appointment.response_note,
+            appointment_date=appointment.appointment_date,
+            staff_name=appointment.staff_member.full_name,
+        )
+    except Exception:
+        logger.exception('Failed to send appointment response email for appointment_id=%s', appointment.id)
 
 
 class AppointmentCreateView(generics.CreateAPIView):
@@ -27,27 +63,8 @@ class AppointmentCreateView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         appointment = serializer.save()
-        staff = appointment.staff_member
-
-        try:
-            send_appointment_email(
-                staff_email=staff.email,
-                visitor_name=appointment.visitor_name,
-                appointment_date=appointment.appointment_date,
-                message=appointment.message,
-            )
-        except Exception:
-            logger.exception('Failed to send appointment request email for appointment_id=%s', appointment.id)
-
-        try:
-            self._push_result = send_fcm_push_notification(
-                fcm_token=staff.fcm_token,
-                title='New Appointment Request',
-                body=f'You have a new appointment from {appointment.visitor_name}',
-            )
-        except Exception:
-            logger.exception('Failed to send FCM push for appointment_id=%s', appointment.id)
-            self._push_result = {'sent': False, 'reason': 'push_notification_exception'}
+        self._push_result = {'sent': False, 'reason': 'deferred_to_async_worker'}
+        threading.Thread(target=_notify_new_appointment, args=(appointment,), daemon=True).start()
 
 
 class MyAppointmentsView(generics.ListAPIView):
@@ -75,18 +92,7 @@ class AppointmentUpdateView(generics.UpdateAPIView):
 
     def perform_update(self, serializer):
         appointment = serializer.save()
-        try:
-            send_appointment_response_email(
-                visitor_email=appointment.visitor_email,
-                visitor_name=appointment.visitor_name,
-                status=appointment.status,
-                response_note=appointment.response_note,
-                appointment_date=appointment.appointment_date,
-                staff_name=appointment.staff_member.full_name,
-            )
-        except Exception:
-            # Do not fail status updates because email notification failed.
-            logger.exception('Failed to send appointment response email for appointment_id=%s', appointment.id)
+        threading.Thread(target=_notify_appointment_response, args=(appointment,), daemon=True).start()
 
     def update(self, request, *args, **kwargs):
         response = super().update(request, *args, **kwargs)
