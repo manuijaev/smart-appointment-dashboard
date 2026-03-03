@@ -123,7 +123,7 @@ def _send_fcm_push_notification_v1(fcm_token, title, body):
                 'notification': {
                     'title': title,
                     'body': body,
-                    'icon': '/icons/icon-192.png',
+                    'icon': '/favicon.ico',
                 }
             },
         }

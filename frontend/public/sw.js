@@ -23,11 +23,35 @@ self.addEventListener('fetch', (event) => {
 });
 
 self.addEventListener('push', (event) => {
-  const data = event.data?.json() || { title: 'New Notification', body: 'You have a new update' };
+  const raw = (event.data && event.data.json && event.data.json()) || {};
+  const notification = raw.notification || raw || {};
+
+  const title = notification.title || 'New Notification';
+  const body = notification.body || 'You have a new update';
+  const icon = notification.icon || '/favicon.ico';
+
   event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: '/icons/icon-192.png',
+    self.registration.showNotification(title, {
+      body,
+      icon,
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow('/staff/dashboard');
+      }
+      return null;
     })
   );
 });
