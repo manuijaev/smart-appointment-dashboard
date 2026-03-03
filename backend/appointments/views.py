@@ -29,17 +29,25 @@ class AppointmentCreateView(generics.CreateAPIView):
         appointment = serializer.save()
         staff = appointment.staff_member
 
-        send_appointment_email(
-            staff_email=staff.email,
-            visitor_name=appointment.visitor_name,
-            appointment_date=appointment.appointment_date,
-            message=appointment.message,
-        )
-        self._push_result = send_fcm_push_notification(
-            fcm_token=staff.fcm_token,
-            title='New Appointment Request',
-            body=f'You have a new appointment from {appointment.visitor_name}',
-        )
+        try:
+            send_appointment_email(
+                staff_email=staff.email,
+                visitor_name=appointment.visitor_name,
+                appointment_date=appointment.appointment_date,
+                message=appointment.message,
+            )
+        except Exception:
+            logger.exception('Failed to send appointment request email for appointment_id=%s', appointment.id)
+
+        try:
+            self._push_result = send_fcm_push_notification(
+                fcm_token=staff.fcm_token,
+                title='New Appointment Request',
+                body=f'You have a new appointment from {appointment.visitor_name}',
+            )
+        except Exception:
+            logger.exception('Failed to send FCM push for appointment_id=%s', appointment.id)
+            self._push_result = {'sent': False, 'reason': 'push_notification_exception'}
 
 
 class MyAppointmentsView(generics.ListAPIView):
