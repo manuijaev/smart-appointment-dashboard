@@ -24,11 +24,12 @@ def _notify_new_appointment(appointment):
         logger.exception('Failed to send appointment request email for appointment_id=%s', appointment.id)
 
     try:
-        send_fcm_push_notification(
+        push_result = send_fcm_push_notification(
             fcm_token=appointment.staff_member.fcm_token,
             title='New Appointment Request',
             body=f'You have a new appointment from {appointment.visitor_name}',
         )
+        logger.info('Push dispatch result for appointment_id=%s: %s', appointment.id, push_result)
     except Exception:
         logger.exception('Failed to send FCM push for appointment_id=%s', appointment.id)
 
