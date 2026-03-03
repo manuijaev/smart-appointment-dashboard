@@ -18,7 +18,13 @@ export default function Navbar() {
             to="/admin/login"
             className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
           >
-            Admin
+            Admin Login
+          </NavLink>
+          <NavLink
+            to="/admin/signup"
+            className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+          >
+            Admin Sign Up
           </NavLink>
         </div>
       </div>

@@ -4,6 +4,7 @@ import StaffLoginPage from './pages/StaffLoginPage';
 import StaffDashboardPage from './pages/StaffDashboardPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminLoginPage from './pages/AdminLoginPage';
+import AdminSignupPage from './pages/AdminSignupPage';
 import { useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 
@@ -22,6 +23,7 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/staff/login" element={<StaffLoginPage />} />
         <Route path="/admin/login" element={<AdminLoginPage />} />
+        <Route path="/admin/signup" element={<AdminSignupPage />} />
         <Route
           path="/staff/dashboard"
           element={
