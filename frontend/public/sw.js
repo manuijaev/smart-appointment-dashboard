@@ -6,7 +6,20 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  event.respondWith(caches.match(event.request).then((res) => res || fetch(event.request)));
+  // Do not intercept non-GET requests (POST/PATCH/PUT/DELETE).
+  if (event.request.method !== 'GET') return;
+
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(event.request).catch(() => {
+        if (event.request.mode === 'navigate') {
+          return caches.match('/index.html');
+        }
+        return new Response('', { status: 504, statusText: 'Offline' });
+      });
+    })
+  );
 });
 
 self.addEventListener('push', (event) => {
