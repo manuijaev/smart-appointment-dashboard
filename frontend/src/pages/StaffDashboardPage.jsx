@@ -208,7 +208,7 @@ export default function StaffDashboardPage() {
   return (
     <div className="container">
       <div className="header-row">
-        <h1>{user?.full_name} Dashboard</h1>
+        <h1>{user?.full_name} Appointment Dashboard</h1>
         <button className="logout-icon-btn" onClick={handleLogout} aria-label="Logout" title="Logout">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M10 3h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-8" />
@@ -270,7 +270,17 @@ export default function StaffDashboardPage() {
                 <span className={`status-badge status-${String(item.status || '').toLowerCase()}`}>{item.status}</span>
               </div>
               <p className="appointment-meta">{item.visitor_email}</p>
-              <p className="appointment-meta">{new Date(item.appointment_date).toLocaleString()}</p>
+              <p className="appointment-meta">
+                {new Date(item.appointment_date).toLocaleString('en-KE', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: false,
+                  timeZone: 'Africa/Nairobi',
+                })}
+              </p>
               <div className="visitor-message">
                 <p className="visitor-message-label">Visitor Message</p>
                 <p className="visitor-message-text">{item.message || 'No message provided.'}</p>
@@ -363,7 +373,17 @@ export default function StaffDashboardPage() {
           <div className="modal-card preview-card">
             <h3>{previewItem.visitor_name}</h3>
             <p>{previewItem.visitor_email}</p>
-            <p>{new Date(previewItem.appointment_date).toLocaleString()}</p>
+            <p>
+              {new Date(previewItem.appointment_date).toLocaleString('en-KE', {
+                year: 'numeric',
+                month: 'short',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+                timeZone: 'Africa/Nairobi',
+              })}
+            </p>
             <p>{previewItem.message || 'No visitor message.'}</p>
             <div className="modal-actions">
               <button type="button" className="btn-muted" onClick={() => setPreviewItem(null)}>

@@ -339,7 +339,7 @@ export default function HomePage() {
       </p>
       <section className="home-intro-grid">
         <article className="card intro-card">
-          <h3 className="section-title">Why book with us?</h3>
+          <h3 className="section-title">Why request an appointment with us?</h3>
           <p className="dialog-copy">
             We designed the experience to be fast, transparent, and simple. Choose your department, pick a staff member,
             and receive email updates as your request is processed.
@@ -351,7 +351,7 @@ export default function HomePage() {
           </div>
         </article>
         <article className="card intro-card">
-          <h3 className="section-title">How it works</h3>
+          <h3 className="section-title">How appointment requests work</h3>
           <ol className="flow-list">
             <li>Answer a few guided questions about your request.</li>
             <li>We forward your appointment to the selected staff member.</li>
@@ -362,9 +362,9 @@ export default function HomePage() {
 
       {!started ? (
         <section className="card dialog-card">
-          <h3 className="section-title">Ready to book your appointment?</h3>
+          <h3 className="section-title">Ready to request your appointment?</h3>
           <p className="dialog-copy">
-            This takes less than one minute. You will answer a few short questions and we will submit your booking instantly.
+            This takes less than one minute. You will answer a few short questions and we will submit your appointment request instantly.
           </p>
           <button
             type="button"
@@ -377,14 +377,14 @@ export default function HomePage() {
               }, 260);
             }}
           >
-            Confirm Booking
+            Start Appointment Request
           </button>
         </section>
       ) : (
         <section className="card dialog-card">
           <div className="progress-wrap">
-            <div className="progress-label-row">
-              <span>Booking Progress</span>
+              <div className="progress-label-row">
+              <span>Request Progress</span>
               <span>{step + 1}/{totalSteps}</span>
             </div>
             <div className="progress-track">

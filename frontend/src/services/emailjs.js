@@ -47,6 +47,18 @@ export async function sendAppointmentRequestEmail({
   staff_name,
 }) {
   const requestTemplateId = import.meta.env.VITE_EMAILJS_REQUEST_TEMPLATE_ID;
+  const eatDate = appointment_date
+    ? new Date(appointment_date).toLocaleString('en-KE', {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: 'Africa/Nairobi',
+      })
+    : '';
+
   return sendViaEmailJs(requestTemplateId, {
     to_email,
     to_name,
@@ -54,7 +66,7 @@ export async function sendAppointmentRequestEmail({
     visitor_email,
     department_name,
     division_name,
-    appointment_date,
+    appointment_date: eatDate,
     message,
     staff_name,
   });
@@ -72,6 +84,18 @@ export async function sendVisitorResponseEmail({
   const responseTemplateId =
     import.meta.env.VITE_EMAILJS_RESPONSE_TEMPLATE_ID ||
     import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+  const eatDate = appointment_date
+    ? new Date(appointment_date).toLocaleString('en-KE', {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: 'Africa/Nairobi',
+      })
+    : '';
+
   return sendViaEmailJs(responseTemplateId, {
       to_email: visitor_email,
       to_name: visitor_name,
@@ -82,7 +106,7 @@ export async function sendVisitorResponseEmail({
       visitor_email,
       status,
       response_note,
-      appointment_date,
+      appointment_date: eatDate,
       staff_name,
     });
 }

@@ -20,6 +20,7 @@ export default function StaffLoginPage() {
   });
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     api.get('/departments/').then(({ data }) => setDepartments(data)).catch(() => {});
@@ -86,6 +87,7 @@ export default function StaffLoginPage() {
   const submitLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
     try {
       const user = await login(form.email, form.password);
       await tryRegisterDevice();
@@ -93,12 +95,15 @@ export default function StaffLoginPage() {
       setTimeout(() => navigateByRole(user), 650);
     } catch (err) {
       setError(extractErrorMessage(err, 'Invalid credentials.'));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const submitSignup = async (e) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
     try {
       await api.post('/staff/register/', {
         full_name: form.full_name,
@@ -114,6 +119,8 @@ export default function StaffLoginPage() {
       setTimeout(() => navigateByRole(user), 700);
     } catch (err) {
       setError(extractErrorMessage(err, 'Unable to sign up. Check your inputs and try again.'));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -226,7 +233,15 @@ export default function StaffLoginPage() {
                   </div>
                 )}
                 <div className="field-group full">
-                  <button type="submit">{mode === 'login' ? 'Login' : 'Create Account'}</button>
+                  <button type="submit" disabled={isSubmitting}>
+                    {mode === 'login'
+                      ? isSubmitting
+                        ? 'Authenticating...'
+                        : 'Login'
+                      : isSubmitting
+                      ? 'Creating account...'
+                      : 'Create Account'}
+                  </button>
                 </div>
               </div>
               {error && <p className="error">{error}</p>}
