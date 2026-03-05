@@ -1,9 +1,12 @@
 import requests
+import logging
 from django.conf import settings
 from django.core.mail import get_connection
 from django.core.mail import send_mail
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
+
+logger = logging.getLogger(__name__)
 
 
 def _build_email_connection():
@@ -61,7 +64,22 @@ def send_fcm_push_notification(fcm_token, title, body):
 
     # Prefer modern FCM HTTP v1 when service-account credentials are configured.
     if settings.FIREBASE_PROJECT_ID and settings.FIREBASE_CLIENT_EMAIL and settings.FIREBASE_PRIVATE_KEY:
-        return _send_fcm_push_notification_v1(fcm_token, title, body)
+        try:
+            v1_result = _send_fcm_push_notification_v1(fcm_token, title, body)
+            if v1_result.get('sent'):
+                return v1_result
+            if not settings.FIREBASE_SERVER_KEY:
+                return v1_result
+            logger.warning('FCM v1 send failed; falling back to legacy API. reason=%s', v1_result.get('reason'))
+        except Exception as exc:
+            if not settings.FIREBASE_SERVER_KEY:
+                return {
+                    'sent': False,
+                    'reason': 'firebase_v1_exception',
+                    'error': str(exc)[:300],
+                    'api': 'fcm_v1',
+                }
+            logger.exception('FCM v1 send raised exception; falling back to legacy API')
 
     # Fallback to legacy server-key auth if still configured.
     if not settings.FIREBASE_SERVER_KEY:
@@ -83,14 +101,16 @@ def send_fcm_push_notification(fcm_token, title, body):
         response = requests.post('https://fcm.googleapis.com/fcm/send', json=payload, headers=headers, timeout=10)
         if response.ok:
             return {'sent': True, 'status_code': response.status_code}
+        body_text = response.text[:500]
         return {
             'sent': False,
             'reason': 'firebase_send_failed',
             'status_code': response.status_code,
-            'body': response.text[:500],
+            'body': body_text,
+            'invalid_token': 'NotRegistered' in body_text or 'InvalidRegistration' in body_text,
         }
-    except requests.RequestException:
-        return {'sent': False, 'reason': 'firebase_request_exception'}
+    except requests.RequestException as exc:
+        return {'sent': False, 'reason': 'firebase_request_exception', 'error': str(exc)[:300]}
 
 
 def _send_fcm_push_notification_v1(fcm_token, title, body):
@@ -134,12 +154,14 @@ def _send_fcm_push_notification_v1(fcm_token, title, body):
         response = requests.post(url, json=payload, headers=headers, timeout=10)
         if response.ok:
             return {'sent': True, 'status_code': response.status_code, 'api': 'fcm_v1'}
+        body_text = response.text[:500]
         return {
             'sent': False,
             'reason': 'firebase_send_failed',
             'status_code': response.status_code,
-            'body': response.text[:500],
+            'body': body_text,
+            'invalid_token': 'UNREGISTERED' in body_text or 'registration-token-not-registered' in body_text,
             'api': 'fcm_v1',
         }
-    except requests.RequestException:
-        return {'sent': False, 'reason': 'firebase_request_exception', 'api': 'fcm_v1'}
+    except requests.RequestException as exc:
+        return {'sent': False, 'reason': 'firebase_request_exception', 'error': str(exc)[:300], 'api': 'fcm_v1'}

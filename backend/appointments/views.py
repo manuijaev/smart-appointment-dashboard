@@ -29,6 +29,14 @@ def _notify_new_appointment(appointment):
             title='New Appointment Request',
             body=f'You have a new appointment from {appointment.visitor_name}',
         )
+        if push_result.get('invalid_token') and appointment.staff_member.fcm_token:
+            appointment.staff_member.fcm_token = ''
+            appointment.staff_member.save(update_fields=['fcm_token'])
+            logger.warning(
+                'Cleared stale FCM token for staff_id=%s after failed push appointment_id=%s',
+                appointment.staff_member_id,
+                appointment.id,
+            )
         logger.info('Push dispatch result for appointment_id=%s: %s', appointment.id, push_result)
     except Exception:
         logger.exception('Failed to send FCM push for appointment_id=%s', appointment.id)
