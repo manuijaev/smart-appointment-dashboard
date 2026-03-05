@@ -7,6 +7,10 @@ import AdminLoginPage from './pages/AdminLoginPage';
 import { useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 
+function roleHomePath(user) {
+  return user?.role === 'Admin' ? '/admin/dashboard' : '/staff/dashboard';
+}
+
 function ProtectedRoute({ children, roles, loginPath = '/staff/login' }) {
   const { user } = useAuth();
   if (!user) return <Navigate to={loginPath} replace />;
@@ -14,14 +18,40 @@ function ProtectedRoute({ children, roles, loginPath = '/staff/login' }) {
   return children;
 }
 
+function PublicOnlyRoute({ children }) {
+  const { user } = useAuth();
+  if (user) return <Navigate to={roleHomePath(user)} replace />;
+  return children;
+}
+
+function HomeRoute() {
+  const { user } = useAuth();
+  if (user) return <Navigate to={roleHomePath(user)} replace />;
+  return <HomePage />;
+}
+
 export default function App() {
   return (
     <>
       <Navbar />
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/staff/login" element={<StaffLoginPage />} />
-        <Route path="/admin/login" element={<AdminLoginPage />} />
+        <Route path="/" element={<HomeRoute />} />
+        <Route
+          path="/staff/login"
+          element={
+            <PublicOnlyRoute>
+              <StaffLoginPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/admin/login"
+          element={
+            <PublicOnlyRoute>
+              <AdminLoginPage />
+            </PublicOnlyRoute>
+          }
+        />
         <Route
           path="/staff/dashboard"
           element={

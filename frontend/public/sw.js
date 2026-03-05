@@ -1,8 +1,13 @@
-const CACHE_NAME = 'appointment-pwa-v1';
+const CACHE_NAME = 'appointment-pwa-v2';
 const ASSETS = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(clients.claim());
 });
 
 self.addEventListener('fetch', (event) => {
@@ -23,33 +28,49 @@ self.addEventListener('fetch', (event) => {
 });
 
 self.addEventListener('push', (event) => {
-  const raw = (event.data && event.data.json && event.data.json()) || {};
-  const notification = raw.notification || raw || {};
+  let raw = {};
+  try {
+    raw = event.data ? event.data.json() : {};
+  } catch (_err) {
+    try {
+      const fallbackText = event.data ? event.data.text() : '';
+      raw = fallbackText ? JSON.parse(fallbackText) : {};
+    } catch (_fallbackErr) {
+      raw = {};
+    }
+  }
+  const notification = raw.notification || raw.webpush?.notification || raw.data || raw || {};
+  const clickPath = raw.data?.click_action || raw.click_action || raw.data?.url || raw.url || '/staff/dashboard';
 
-  const title = notification.title || 'New Notification';
-  const body = notification.body || 'You have a new update';
+  const title = notification.title || 'New Appointment Request';
+  const body = notification.body || 'You have a new appointment update.';
   const icon = notification.icon || '/favicon.ico';
 
   event.waitUntil(
     self.registration.showNotification(title, {
       body,
       icon,
+      data: { clickPath },
     })
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const clickPath = event.notification?.data?.clickPath || '/staff/dashboard';
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if ('focus' in client) {
+          if ('navigate' in client) {
+            client.navigate(clickPath);
+          }
           return client.focus();
         }
       }
       if (clients.openWindow) {
-        return clients.openWindow('/staff/dashboard');
+        return clients.openWindow(clickPath);
       }
       return null;
     })
