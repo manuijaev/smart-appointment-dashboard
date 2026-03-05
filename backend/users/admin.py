@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from .models import User
+from .models import User, UserDeviceToken
 
 
 @admin.register(User)
@@ -32,3 +32,10 @@ class UserAdmin(BaseUserAdmin):
             ),
         }),
     )
+
+
+@admin.register(UserDeviceToken)
+class UserDeviceTokenAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'is_active', 'updated_at', 'created_at')
+    search_fields = ('user__email', 'user__full_name', 'token')
+    list_filter = ('is_active',)

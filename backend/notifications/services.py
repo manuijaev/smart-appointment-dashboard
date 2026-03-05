@@ -91,9 +91,17 @@ def send_fcm_push_notification(fcm_token, title, body):
     }
     payload = {
         'to': fcm_token,
+        'priority': 'high',
+        'content_available': True,
         'notification': {
             'title': title,
             'body': body,
+        },
+        'data': {
+            'title': title,
+            'body': body,
+            'click_action': '/staff/dashboard',
+            'url': '/staff/dashboard',
         },
     }
 
@@ -140,11 +148,26 @@ def _send_fcm_push_notification_v1(fcm_token, title, body):
                 'body': body,
             },
             'webpush': {
+                'headers': {
+                    'Urgency': 'high',
+                    'TTL': '300',
+                },
+                'fcm_options': {
+                    'link': '/staff/dashboard',
+                },
                 'notification': {
                     'title': title,
                     'body': body,
                     'icon': '/favicon.ico',
-                }
+                    'requireInteraction': True,
+                    'tag': 'appointment-update',
+                },
+            },
+            'data': {
+                'title': title,
+                'body': body,
+                'click_action': '/staff/dashboard',
+                'url': '/staff/dashboard',
             },
         }
     }

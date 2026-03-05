@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import User
+from .models import UserDeviceToken
 from .permissions import IsAdminRole
 from .serializers import (
     FCMTokenUpdateSerializer,
@@ -51,6 +52,16 @@ class UpdateFCMTokenView(generics.UpdateAPIView):
 
     def update(self, request, *args, **kwargs):
         response = super().update(request, *args, **kwargs)
+        token = str(request.data.get('fcm_token', '')).strip()
+        if token:
+            UserDeviceToken.objects.update_or_create(
+                token=token,
+                defaults={
+                    'user': request.user,
+                    'user_agent': request.headers.get('User-Agent', '')[:255],
+                    'is_active': True,
+                },
+            )
         return Response({'message': 'FCM token updated', 'data': response.data})
 
 

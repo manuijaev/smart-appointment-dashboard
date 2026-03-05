@@ -5,6 +5,7 @@ from rest_framework import generics, permissions
 from rest_framework.response import Response
 
 from notifications.services import send_appointment_email, send_appointment_response_email, send_fcm_push_notification
+from users.models import UserDeviceToken
 
 from .models import Appointment
 from .serializers import AppointmentCreateSerializer, AppointmentListSerializer, AppointmentUpdateSerializer
@@ -24,20 +25,52 @@ def _notify_new_appointment(appointment):
         logger.exception('Failed to send appointment request email for appointment_id=%s', appointment.id)
 
     try:
-        push_result = send_fcm_push_notification(
-            fcm_token=appointment.staff_member.fcm_token,
-            title='New Appointment Request',
-            body=f'You have a new appointment from {appointment.visitor_name}',
+        token_set = set(
+            UserDeviceToken.objects.filter(user=appointment.staff_member, is_active=True).values_list('token', flat=True)
         )
-        if push_result.get('invalid_token') and appointment.staff_member.fcm_token:
-            appointment.staff_member.fcm_token = ''
-            appointment.staff_member.save(update_fields=['fcm_token'])
-            logger.warning(
-                'Cleared stale FCM token for staff_id=%s after failed push appointment_id=%s',
-                appointment.staff_member_id,
-                appointment.id,
+        if appointment.staff_member.fcm_token:
+            token_set.add(appointment.staff_member.fcm_token)
+
+        if not token_set:
+            logger.info('Push skipped for appointment_id=%s reason=no_registered_device_tokens', appointment.id)
+            return
+
+        sent_count = 0
+        failed_count = 0
+        for token in token_set:
+            push_result = send_fcm_push_notification(
+                fcm_token=token,
+                title='New Appointment Request',
+                body=f'You have a new appointment from {appointment.visitor_name}',
             )
-        logger.info('Push dispatch result for appointment_id=%s: %s', appointment.id, push_result)
+            if push_result.get('sent'):
+                sent_count += 1
+            else:
+                failed_count += 1
+            if push_result.get('invalid_token'):
+                UserDeviceToken.objects.filter(token=token).update(is_active=False)
+                if token == appointment.staff_member.fcm_token:
+                    appointment.staff_member.fcm_token = ''
+                    appointment.staff_member.save(update_fields=['fcm_token'])
+                logger.warning(
+                    'Deactivated stale FCM token for staff_id=%s appointment_id=%s',
+                    appointment.staff_member_id,
+                    appointment.id,
+                )
+            logger.info(
+                'Push dispatch result appointment_id=%s staff_id=%s token_prefix=%s result=%s',
+                appointment.id,
+                appointment.staff_member_id,
+                token[:12],
+                push_result,
+            )
+        logger.info(
+            'Push fanout summary appointment_id=%s sent=%s failed=%s total_tokens=%s',
+            appointment.id,
+            sent_count,
+            failed_count,
+            len(token_set),
+        )
     except Exception:
         logger.exception('Failed to send FCM push for appointment_id=%s', appointment.id)
 
