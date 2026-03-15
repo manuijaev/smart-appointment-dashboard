@@ -15,15 +15,20 @@ logger = logging.getLogger(__name__)
 
 
 def _notify_new_appointment(appointment):
+    logger.info(f'Starting notification for appointment_id={appointment.id}, staff_member={appointment.staff_member}')
+    
     try:
+        staff_email = appointment.staff_member.email
+        logger.info(f'Sending email to staff: {staff_email}')
         send_appointment_email(
-            staff_email=appointment.staff_member.email,
+            staff_email=staff_email,
             visitor_name=appointment.visitor_name,
             appointment_date=appointment.appointment_date,
             message=appointment.message,
         )
-    except Exception:
-        logger.exception('Failed to send appointment request email for appointment_id=%s', appointment.id)
+        logger.info(f'Email sent successfully to {staff_email}')
+    except Exception as e:
+        logger.exception('Failed to send appointment request email for appointment_id=%s: %s', appointment.id, str(e))
 
     try:
         token_set = set(
