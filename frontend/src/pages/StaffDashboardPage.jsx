@@ -2,18 +2,170 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useAppointments } from '../context/AppointmentContext';
-import { useNotification } from '../context/NotificationContext';
 import ConfirmModal from '../components/ConfirmModal';
 import { sendVisitorResponseEmail } from '../services/emailjs';
 
-const RESPONSE_LOOP_STORAGE_KEY = 'staff_response_loop_enabled_ids';
+const ICONS = {
+  dashboard: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="3" width="7" height="9" rx="1" />
+      <rect x="14" y="3" width="7" height="5" rx="1" />
+      <rect x="14" y="12" width="7" height="9" rx="1" />
+      <rect x="3" y="16" width="7" height="5" rx="1" />
+    </svg>
+  ),
+  calendar: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  ),
+  clock: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="9" />
+      <polyline points="12,6 12,12 16,14" />
+    </svg>
+  ),
+  check: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polyline points="20,6 9,17 4,12" />
+    </svg>
+  ),
+  x: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  ),
+  user: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  ),
+  mail: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <polyline points="22,6 12,13 2,6" />
+    </svg>
+  ),
+  phone: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+    </svg>
+  ),
+  bell: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  ),
+  search: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  ),
+  logout: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16,17 21,12 16,7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  ),
+  filter: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46" />
+    </svg>
+  ),
+  download: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7,10 12,15 17,10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  ),
+  plus: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  ),
+  chevronLeft: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polyline points="15,18 9,12 15,6" />
+    </svg>
+  ),
+  chevronRight: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polyline points="9,18 15,12 9,6" />
+    </svg>
+  ),
+  menu: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <line x1="3" y1="18" x2="21" y2="18" />
+    </svg>
+  ),
+  settings: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
+  ),
+  activity: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polyline points="22,12 18,12 15,21 9,3 6,12 2,12" />
+    </svg>
+  ),
+  alertCircle: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+  ),
+  refresh: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polyline points="23,4 23,10 17,10" />
+      <polyline points="1,20 1,14 7,14" />
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+    </svg>
+  ),
+  grid: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="3" width="7" height="7" />
+      <rect x="14" y="3" width="7" height="7" />
+      <rect x="14" y="14" width="7" height="7" />
+      <rect x="3" y="14" width="7" height="7" />
+    </svg>
+  ),
+  list: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <line x1="8" y1="6" x2="21" y2="6" />
+      <line x1="8" y1="12" x2="21" y2="12" />
+      <line x1="8" y1="18" x2="21" y2="18" />
+      <line x1="3" y1="6" x2="3.01" y2="6" />
+      <line x1="3" y1="12" x2="3.01" y2="12" />
+      <line x1="3" y1="18" x2="3.01" y2="18" />
+    </svg>
+  ),
+};
 
 export default function StaffDashboardPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { registerDevice, subscribeToForegroundMessages } = useNotification();
   const { appointments, loadMyAppointments, updateAppointment, deleteAppointment, deleteAppointmentsBulk } = useAppointments();
+  
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [viewMode, setViewMode] = useState('grid');
+  const [searchQuery, setSearchQuery] = useState('');
   const [responseNote, setResponseNote] = useState({});
+  const [responseAreaOpen, setResponseAreaOpen] = useState({});
+  const [responseAction, setResponseAction] = useState({});
   const [pendingStatusUpdate, setPendingStatusUpdate] = useState(null);
   const [pendingDelete, setPendingDelete] = useState(null);
   const [error, setError] = useState('');
@@ -23,9 +175,42 @@ export default function StaffDashboardPage() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [previewItem, setPreviewItem] = useState(null);
-  const [responseLoopEnabledIds, setResponseLoopEnabledIds] = useState([]);
-  const [responseLoopPhase, setResponseLoopPhase] = useState('visual');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [dateFilter, setDateFilter] = useState('all');
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  // Initialize notifications from localStorage for persistence
+  const [notifications, setNotifications] = useState(() => {
+    try {
+      const saved = localStorage.getItem('staff_notifications');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Current time for clock display
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Persist notifications to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('staff_notifications', JSON.stringify(notifications));
+    } catch (e) {
+      console.error('Failed to save notifications:', e);
+    }
+  }, [notifications]);
   const longPressTimerRef = useRef(null);
+  const notificationRef = useRef(null);
+
+  const today = new Date().toISOString().split('T')[0];
+
+  useEffect(() => {
+    document.body.classList.remove('home-background', 'auth-background', 'dashboard-background');
+    document.body.classList.add('home-background');
+    return () => {
+      document.body.classList.remove('home-background');
+    };
+  }, []);
 
   useEffect(() => {
     loadMyAppointments().catch(() => {
@@ -34,61 +219,100 @@ export default function StaffDashboardPage() {
   }, []);
 
   useEffect(() => {
-    registerDevice().catch(() => {});
-  }, [registerDevice]);
-
-  useEffect(() => {
     const intervalId = setInterval(() => {
       loadMyAppointments().catch(() => {});
-    }, 8000);
+    }, 15000);
     return () => clearInterval(intervalId);
   }, [loadMyAppointments]);
 
+  // Update time every second for clock display
   useEffect(() => {
-    let unsubscribe = () => {};
-    subscribeToForegroundMessages((payload) => {
-      const title = payload?.notification?.title || 'New update';
-      const body = payload?.notification?.body || 'A new appointment update is available.';
-      setToast(`${title}: ${body}`);
-      setTimeout(() => setToast(''), 4000);
-      loadMyAppointments().catch(() => {});
-    }).then((unsub) => {
-      if (typeof unsub === 'function') unsubscribe = unsub;
-    }).catch(() => {});
-    return () => unsubscribe();
-  }, [subscribeToForegroundMessages, loadMyAppointments]);
-
-  useEffect(() => {
-    document.body.classList.add('dashboard-background');
-    return () => {
-      document.body.classList.remove('dashboard-background');
-    };
+    const timerId = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timerId);
   }, []);
 
+  // Close notification dropdown when clicking outside
   useEffect(() => {
-    const saved = localStorage.getItem(RESPONSE_LOOP_STORAGE_KEY);
-    if (!saved) return;
-    try {
-      const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed)) {
-        setResponseLoopEnabledIds(parsed);
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setNotificationsOpen(false);
       }
-    } catch {
-      localStorage.removeItem(RESPONSE_LOOP_STORAGE_KEY);
+    };
+
+    if (notificationsOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
     }
-  }, []);
 
-  useEffect(() => {
-    localStorage.setItem(RESPONSE_LOOP_STORAGE_KEY, JSON.stringify(responseLoopEnabledIds));
-  }, [responseLoopEnabledIds]);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [notificationsOpen]);
 
-  useEffect(() => {
-    if (!responseLoopEnabledIds.length) return;
-    const intervalId = setInterval(() => {
-      setResponseLoopPhase((prev) => (prev === 'visual' ? 'response' : 'visual'));
-    }, 5000);
-    return () => clearInterval(intervalId);
-  }, [responseLoopEnabledIds.length]);
+  const getInitials = (name) => {
+    if (!name) return '??';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  const formatTime = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
+
+  const getDateLabel = () => {
+    const date = new Date();
+    return date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  };
+
+  const getTimeLabel = () => {
+    return currentTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) + ' EAT';
+  };
+
+  const getWeekNumber = () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 1);
+    const diff = now - start;
+    const oneWeek = 604800000;
+    return Math.ceil(diff / oneWeek);
+  };
+
+  const filteredAppointments = appointments.filter(a => {
+    // Filter by status for specific tabs
+    if (activeTab === 'pending' && a.status !== 'Pending') return false;
+    if (activeTab === 'accepted' && a.status !== 'Accepted') return false;
+    if (activeTab === 'declined' && a.status !== 'Declined') return false;
+    if (activeTab === 'history' && ['Pending', 'Accepted'].includes(a.status)) return false;
+    
+    if (dateFilter === 'today' && !a.appointment_date.startsWith(today)) return false;
+    if (dateFilter === 'upcoming' && new Date(a.appointment_date) < new Date()) return false;
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      return (
+        a.visitor_name?.toLowerCase().includes(query) ||
+        a.visitor_email?.toLowerCase().includes(query) ||
+        a.service?.name?.toLowerCase().includes(query)
+      );
+    }
+    return true;
+  });
+
+  const stats = {
+    pending: appointments.filter(a => a.status === 'Pending').length,
+    accepted: appointments.filter(a => a.status === 'Accepted').length,
+    declined: appointments.filter(a => a.status === 'Declined').length,
+    rescheduled: appointments.filter(a => a.status === 'Rescheduled').length,
+    today: appointments.filter(a => a.appointment_date.startsWith(today)).length,
+    total: appointments.length,
+    acceptRate: appointments.length > 0 
+      ? Math.round((appointments.filter(a => a.status === 'Accepted').length / appointments.length) * 100) 
+      : 0,
+  };
 
   const updateStatus = async (appointmentId, status) => {
     const appointment = appointments.find((item) => item.id === appointmentId);
@@ -174,168 +398,667 @@ export default function StaffDashboardPage() {
     setNotice('Appointment(s) deleted successfully.');
   };
 
-  const handleCardTouchStart = (item) => {
-    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-    longPressTimerRef.current = setTimeout(() => {
-      setSelectionMode(true);
-      setPreviewItem(item);
-    }, 2000);
-  };
-
-  const clearLongPress = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  };
-
   const handleLogout = () => {
-    sessionStorage.setItem('app_toast', 'Logged out successfully.');
+    sessionStorage.setItem('app_toast', `Goodbye, ${user?.full_name || 'Staff'}! You have been logged out successfully.`);
     logout();
     navigate('/staff/login');
   };
 
-  const toggleResponseLoop = (appointmentId) => {
-    setResponseLoopEnabledIds((prev) => {
-      if (prev.includes(appointmentId)) {
-        return prev.filter((id) => id !== appointmentId);
-      }
-      setResponseLoopPhase('response');
-      return [...prev, appointmentId];
-    });
+  const openResponseArea = (id, action = 'Accepted') => {
+    setResponseAction((prev) => ({ ...prev, [id]: action }));
+    setResponseAreaOpen((prev) => ({ ...prev, [id]: true }));
   };
 
+  const closeResponseArea = (id) => {
+    setResponseAreaOpen((prev) => ({ ...prev, [id]: false }));
+  };
+
+  const openPreview = (item) => {
+    setPreviewItem(item);
+  };
+
+  const closePreview = () => {
+    setPreviewItem(null);
+  };
+
+  const showToast = (msg) => {
+    setToast(msg);
+    // Add to notifications
+    const newNotification = {
+      id: Date.now(),
+      message: msg,
+      time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+      read: false
+    };
+    setNotifications(prev => [newNotification, ...prev].slice(0, 20));
+    setTimeout(() => setToast(''), 4000);
+  };
+
+  const handleExportCSV = () => {
+    const data = filteredAppointments.length > 0 ? filteredAppointments : appointments;
+    if (data.length === 0) {
+      showToast('No appointments to export');
+      return;
+    }
+    
+    const headers = ['ID', 'Visitor Name', 'Visitor Email', 'Date/Time Sent', 'Date/Time', 'Status', 'Visitor Message', 'Staff Response'];
+    const csvContent = [
+      headers.join(','),
+      ...data.map(apt => [
+        apt.id,
+        `"${apt.visitor_name}"`,
+        `"${apt.visitor_email}"`,
+        `"${apt.appointment_date ? new Date(apt.appointment_date).toLocaleString('en-GB') : ''}"`,
+        apt.date && apt.time ? `"${apt.date} ${apt.time}"` : '""',
+        apt.status,
+        `"${apt.message || ''}"`,
+        `"${apt.response_note || ''}"`
+      ].join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `appointments_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    showToast('Appointments exported to CSV');
+  };
+
+  const handleExportStats = () => {
+    const statsData = [
+      { Metric: 'Total Appointments', Value: appointments.length },
+      { Metric: 'Pending', Value: appointments.filter(a => a.status === 'Pending').length },
+      { Metric: 'Accepted', Value: appointments.filter(a => a.status === 'Accepted').length },
+      { Metric: 'Declined', Value: appointments.filter(a => a.status === 'Declined').length },
+      { Metric: 'Rescheduled', Value: appointments.filter(a => a.status === 'Rescheduled').length },
+      { Metric: 'Today\'s Appointments', Value: appointments.filter(a => a.appointment_date.startsWith(today)).length },
+      { Metric: 'Acceptance Rate', Value: appointments.length > 0 ? Math.round((appointments.filter(a => a.status === 'Accepted').length / appointments.length) * 100) + '%' : '0%' },
+    ];
+    
+    const headers = ['Metric', 'Value'];
+    const csvContent = [
+      headers.join(','),
+      ...statsData.map(row => `${row.Metric},${row.Value}`)
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `daily_statistics_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    showToast('Daily statistics exported');
+  };
+
+  const handleExportStaff = () => {
+    if (!user) {
+      showToast('No user data available');
+      return;
+    }
+    
+    const staffData = [{
+      Name: user.full_name || '',
+      Email: user.email || '',
+      Department: user.department_name || '',
+      Role: user.role || 'Staff',
+    }];
+    
+    const headers = ['Name', 'Email', 'Department', 'Role'];
+    const csvContent = [
+      headers.join(','),
+      ...staffData.map(row => `${row.Name},${row.Email},${row.Department},${row.Role}`)
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `staff_profile_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    showToast('Staff profile exported');
+  };
+
+  const getOverdueHours = (dateStr) => {
+    const apptDate = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - apptDate;
+    return Math.floor(diffMs / (1000 * 60 * 60));
+  };
+
+  const recentAppointments = [...appointments]
+    .sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date))
+    .slice(0, 3);
+
+  const upcomingAppointments = appointments
+    .filter(a => new Date(a.appointment_date) >= new Date() && a.status === 'Accepted')
+    .sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date))
+    .slice(0, 5);
+
   return (
-    <div className="container">
-      <div className="header-row">
-        <h1>{user?.full_name} Appointment Dashboard</h1>
-        <button className="logout-icon-btn" onClick={handleLogout} aria-label="Logout" title="Logout">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M10 3h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-8" />
-            <path d="M14 12H3" />
-            <path d="m7 8-4 4 4 4" />
-          </svg>
-        </button>
-      </div>
-      <p className="page-subtitle">Review requests and send immediate responses to visitors.</p>
-      <div className="selection-toolbar">
-        <button
-          type="button"
-          className="btn-muted toolbar-btn"
-          onClick={() => {
-            setSelectionMode((prev) => !prev);
-            if (selectionMode) setSelectedIds([]);
-          }}
-        >
-          {selectionMode ? 'Done' : 'Select'}
-        </button>
-        {selectionMode && (
-          <>
-            <span className="selection-count">{selectedIds.length} selected</span>
-            <button
-              type="button"
-              className="btn-danger toolbar-btn"
-              disabled={!selectedIds.length}
-              onClick={requestDeleteSelected}
-            >
-              Delete Selected
-            </button>
-          </>
-        )}
-      </div>
-      <div className="list">
-        {error && <p className="error">{error}</p>}
-        {notice && <p className="success">{notice}</p>}
-        <div className="appointment-grid">
-          {appointments.map((item) => (
-            <article
-              className={`card appointment-card ${selectionMode && selectedIds.includes(item.id) ? 'is-selected' : ''}`}
-              key={item.id}
-              onTouchStart={() => handleCardTouchStart(item)}
-              onTouchEnd={clearLongPress}
-              onTouchMove={clearLongPress}
-            >
-              {selectionMode && (
-                <label className="select-chip">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(item.id)}
-                    onChange={() => toggleSelected(item.id)}
-                  />
-                  <span>Select</span>
-                </label>
-              )}
-              <div className="appointment-head">
-                <h3>{item.visitor_name}</h3>
-                <span className={`status-badge status-${String(item.status || '').toLowerCase()}`}>{item.status}</span>
-              </div>
-              <p className="appointment-meta">{item.visitor_email}</p>
-              <p className="appointment-meta">
-                {new Date(item.appointment_date).toLocaleString('en-KE', {
-                  year: 'numeric',
-                  month: 'short',
-                  day: '2-digit',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: false,
-                  timeZone: 'Africa/Nairobi',
-                })}
-              </p>
-              <div className="visitor-message">
-                <p className="visitor-message-label">Visitor Message</p>
-                <p className="visitor-message-text">{item.message || 'No message provided.'}</p>
-              </div>
-              {!selectionMode ? (
-                <>
-                  {item.status === 'Pending' ? (
-                    <>
-                      <textarea
-                        placeholder="Response note"
-                        value={responseNote[item.id] || ''}
-                        onChange={(e) => setResponseNote((prev) => ({ ...prev, [item.id]: e.target.value }))}
-                      />
-                      <div className="row-actions compact-actions">
-                        <button onClick={() => requestStatusUpdate(item.id, item.visitor_name, 'Accepted')}>Accept</button>
-                        <button onClick={() => requestStatusUpdate(item.id, item.visitor_name, 'Rescheduled')}>Reschedule</button>
-                        <button className="btn-danger" onClick={() => requestStatusUpdate(item.id, item.visitor_name, 'Declined')}>Decline</button>
-                      </div>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      className="response-toggle-btn"
-                      onClick={() => toggleResponseLoop(item.id)}
-                    >
-                      <div
-                        className={`response-state ${
-                          responseLoopEnabledIds.includes(item.id) && responseLoopPhase === 'response'
-                            ? 'show-response'
-                            : 'show-visual'
-                        }`}
-                      >
-                        <div className="response-submitted response-layer">
-                          <span className="response-submitted-icon" aria-hidden="true">✓</span>
-                          <p className="response-submitted-text">
-                            Response sent successfully to <strong>{item.visitor_name}</strong> email
-                          </p>
-                        </div>
-                        <div className="response-details response-layer">
-                          <p className="response-details-label">Sent Response</p>
-                          <p className="response-details-text">{item.response_note || 'No response note.'}</p>
-                        </div>
-                      </div>
-                    </button>
-                  )}
-                </>
-              ) : (
-                <button className="btn-danger compact-single-delete" onClick={() => requestDeleteSingle(item.id)}>
-                  Delete Card
-                </button>
-              )}
-            </article>
-          ))}
+    <div className="sd-container">
+      {/* Toast Notification */}
+      {toast && (
+        <div className="sd-toast">
+          <span>{toast}</span>
+          <button onClick={() => setToast('')}>{ICONS.x}</button>
         </div>
-      </div>
+      )}
+
+      {/* Sidebar */}
+      <aside className={`sd-sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <div className="sd-sidebar-header">
+          <div className="sd-brand">
+            <div className="sd-brand-icon">{ICONS.calendar}</div>
+            <div>
+              <div className="sd-brand-name">Gatepass</div>
+              <div className="sd-brand-role">Staff Portal</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="sd-user-card">
+          <div className="sd-user-avatar">{getInitials(user?.full_name)}</div>
+          <div className="sd-user-info">
+            <div className="sd-user-name">{user?.full_name || 'Staff Member'}</div>
+            <div className="sd-user-dept">
+              {user?.department_name || 'No Department'}
+              {user?.division_name && ` / ${user.division_name}`}
+            </div>
+          </div>
+        </div>
+
+        <nav className="sd-nav">
+          <div className="sd-nav-section">MAIN</div>
+          <button className={`sd-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => { setActiveTab('dashboard'); setSidebarOpen(false); }}>
+            {ICONS.dashboard}<span>Dashboard</span>
+          </button>
+          <button className={`sd-nav-item ${activeTab === 'appointments' ? 'active' : ''}`} onClick={() => { setActiveTab('appointments'); setSidebarOpen(false); }}>
+            {ICONS.calendar}<span>Appointments</span>
+            <span className="sd-nav-badge">{stats.pending}</span>
+          </button>
+          <button className={`sd-nav-item ${activeTab === 'schedule' ? 'active' : ''}`} onClick={() => { setActiveTab('schedule'); setSidebarOpen(false); }}>
+            {ICONS.clock}<span>Schedule</span>
+          </button>
+
+          <div className="sd-nav-section">MANAGE</div>
+          <button className={`sd-nav-item ${activeTab === 'pending' ? 'active' : ''}`} onClick={() => { setActiveTab('pending'); setSidebarOpen(false); }}>
+            {ICONS.activity}<span>Pending</span>
+            <span className="sd-nav-badge red">{stats.pending}</span>
+          </button>
+          <button className={`sd-nav-item ${activeTab === 'accepted' ? 'active' : ''}`} onClick={() => { setActiveTab('accepted'); setSidebarOpen(false); }}>
+            {ICONS.check}<span>Accepted</span>
+          </button>
+          <button className={`sd-nav-item ${activeTab === 'declined' ? 'active' : ''}`} onClick={() => { setActiveTab('declined'); setSidebarOpen(false); }}>
+            {ICONS.x}<span>Declined</span>
+          </button>
+          <button className={`sd-nav-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => { setActiveTab('history'); setSidebarOpen(false); }}>
+            {ICONS.refresh}<span>History</span>
+          </button>
+
+          <div className="sd-nav-section">ACTIONS</div>
+          <button className="sd-nav-item" onClick={() => { handleExportCSV(); setSidebarOpen(false); }}>
+            {ICONS.download}<span>Export Appointments</span>
+          </button>
+          <button className="sd-nav-item" onClick={() => { setActiveTab('settings'); setSidebarOpen(false); }}>
+            {ICONS.settings}<span>Settings</span>
+          </button>
+        </nav>
+
+        <div className="sd-sidebar-footer">
+          <button className="sd-logout-btn" onClick={handleLogout}>
+            {ICONS.logout}<span>Sign Out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="sd-main">
+        {/* Top Bar */}
+        <header className="sd-topbar">
+          <div className="sd-topbar-left">
+            <button className="sd-menu-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>
+              {ICONS.menu}
+            </button>
+            <div className="sd-search-box">
+              {ICONS.search}
+              <input 
+                type="text" 
+                placeholder="Search appointments..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="sd-topbar-right">
+            <div className="sd-date-display">
+              {getDateLabel()} - {getTimeLabel()}
+            </div>
+            <div className="sd-notification-wrapper" ref={notificationRef}>
+              <button className="sd-icon-btn" onClick={() => setNotificationsOpen(!notificationsOpen)}>
+                {ICONS.bell}
+                {notifications.filter(n => !n.read).length > 0 && (
+                  <span className="sd-notification-badge">{notifications.filter(n => !n.read).length}</span>
+                )}
+              </button>
+              {notificationsOpen && (
+                <div className="sd-notification-dropdown">
+                  <div className="sd-notification-header">
+                    <div className="sd-notification-header-left">
+                      <h4>Notifications</h4>
+                      {notifications.length > 0 && (
+                        <span className="sd-notification-count">{notifications.filter(n => !n.read).length} unread</span>
+                      )}
+                    </div>
+                    {notifications.length > 0 && (
+                      <button onClick={() => { setNotifications([]); setNotificationsOpen(false); }} className="sd-clear-all-btn">Clear all</button>
+                    )}
+                  </div>
+                  <div className="sd-notification-list">
+                    {notifications.length === 0 ? (
+                      <div className="sd-notification-empty">
+                        <div className="sd-notification-empty-icon">{ICONS.bell}</div>
+                        <p>No notifications yet</p>
+                      </div>
+                    ) : (
+                      notifications.slice(0, 10).map(n => (
+                        <div key={n.id} className={`sd-notification-item ${!n.read ? 'unread' : ''}`} onClick={() => {
+                          setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, read: true } : item));
+                          setNotificationsOpen(false);
+                        }}>
+                          <div className="sd-notification-dot"></div>
+                          <div className="sd-notification-content">
+                            <p>{n.message}</p>
+                            <span>{n.time}</span>
+                          </div>
+                          <button 
+                            className="sd-notification-clear" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setNotifications(prev => prev.filter(item => item.id !== n.id));
+                            }}
+                            title="Clear this notification"
+                          >
+                            {ICONS.x}
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            <button className="sd-icon-btn" onClick={() => loadMyAppointments().then(() => showToast('Refreshed!'))}>{ICONS.refresh}</button>
+            <div className="sd-avatar">{getInitials(user?.full_name)}</div>
+          </div>
+        </header>
+
+        {/* Dashboard Content */}
+        <div className="sd-content">
+          {activeTab === 'dashboard' && (
+            <>
+              {/* Stats Grid */}
+              <div className="sd-stats-grid">
+                <div className="sd-stat-card">
+                  <div className="sd-stat-icon" style={{ background: 'var(--gold-light)', color: 'var(--gold-dark)' }}>
+                    {ICONS.clock}
+                  </div>
+                  <div className="sd-stat-info">
+                    <div className="sd-stat-value">{stats.pending}</div>
+                    <div className="sd-stat-label">Pending</div>
+                  </div>
+                </div>
+                <div className="sd-stat-card">
+                  <div className="sd-stat-icon" style={{ background: 'var(--green-light)', color: 'var(--green-dark)' }}>
+                    {ICONS.check}
+                  </div>
+                  <div className="sd-stat-info">
+                    <div className="sd-stat-value">{stats.accepted}</div>
+                    <div className="sd-stat-label">Accepted</div>
+                  </div>
+                </div>
+                <div className="sd-stat-card">
+                  <div className="sd-stat-icon" style={{ background: 'var(--teal-light)', color: 'var(--teal-dark)' }}>
+                    {ICONS.calendar}
+                  </div>
+                  <div className="sd-stat-info">
+                    <div className="sd-stat-value">{stats.today}</div>
+                    <div className="sd-stat-label">Today</div>
+                  </div>
+                </div>
+                <div className="sd-stat-card">
+                  <div className="sd-stat-icon" style={{ background: '#e6f4f2', color: 'var(--teal)' }}>
+                    {ICONS.activity}
+                  </div>
+                  <div className="sd-stat-info">
+                    <div className="sd-stat-value">{stats.acceptRate}%</div>
+                    <div className="sd-stat-label">Accept Rate</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="sd-section">
+                <div className="sd-section-header">
+                  <h3>Quick Actions</h3>
+                </div>
+                <div className="sd-actions-grid">
+                  <button className="sd-action-card" onClick={() => setActiveTab('appointments')}>
+                    <div className="sd-action-icon sd-action-icon-teal">{ICONS.calendar}</div>
+                    <span>View All Appointments</span>
+                  </button>
+                  <button className="sd-action-card" onClick={() => setActiveTab('pending')}>
+                    <div className="sd-action-icon sd-action-icon-gold">{ICONS.activity}</div>
+                    <span>Review Pending</span>
+                  </button>
+                  <button className="sd-action-card" onClick={handleExportCSV}>
+                    <div className="sd-action-icon sd-action-icon-green">{ICONS.download}</div>
+                    <span>Export Data</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Recent & Upcoming */}
+              <div className="sd-two-col">
+                <div className="sd-panel">
+                  <div className="sd-panel-header">
+                    <h3>{ICONS.activity} Recent Activity</h3>
+                  </div>
+                  <div className="sd-list">
+                    {recentAppointments.length === 0 ? (
+                      <div className="sd-empty">No recent appointments</div>
+                    ) : (
+                      recentAppointments.map(apt => (
+                        <div key={apt.id} className="sd-list-item" onClick={() => openPreview(apt)}>
+                          <div className="sd-list-avatar" style={{ 
+                            background: apt.status === 'Pending' ? 'var(--gold-light)' : 
+                                       apt.status === 'Accepted' ? 'var(--green-light)' : 'var(--red-light)',
+                            color: apt.status === 'Pending' ? 'var(--gold-dark)' : 
+                                   apt.status === 'Accepted' ? 'var(--green-dark)' : 'var(--red-dark)'
+                          }}>
+                            {getInitials(apt.visitor_name)}
+                          </div>
+                          <div className="sd-list-info">
+                            <div className="sd-list-name">{apt.visitor_name}</div>
+                            <div className="sd-list-meta">{formatDate(apt.appointment_date)} - {formatTime(apt.appointment_date)}</div>
+                          </div>
+                          <span className={`sd-badge sd-badge-${apt.status?.toLowerCase()}`}>{apt.status}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div className="sd-panel">
+                  <div className="sd-panel-header">
+                    <h3>{ICONS.calendar} Upcoming</h3>
+                  </div>
+                  <div className="sd-list">
+                    {upcomingAppointments.length === 0 ? (
+                      <div className="sd-empty">No upcoming appointments</div>
+                    ) : (
+                      upcomingAppointments.map(apt => (
+                        <div key={apt.id} className="sd-list-item" onClick={() => openPreview(apt)}>
+                          <div className="sd-list-avatar" style={{ background: 'var(--teal-light)', color: 'var(--teal-dark)' }}>
+                            {getInitials(apt.visitor_name)}
+                          </div>
+                          <div className="sd-list-info">
+                            <div className="sd-list-name">{apt.visitor_name}</div>
+                            <div className="sd-list-meta">{formatDate(apt.appointment_date)} - {formatTime(apt.appointment_date)}</div>
+                          </div>
+                          <span className="sd-badge sd-badge-accepted">{apt.status}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {(activeTab === 'appointments' || activeTab === 'pending' || activeTab === 'accepted' || activeTab === 'declined' || activeTab === 'history') && (
+            <>
+              {/* Filter Bar */}
+              <div className="sd-filter-bar">
+                <div className="sd-filter-tabs">
+                  <button className={`sd-filter-tab ${dateFilter === 'all' ? 'active' : ''}`} onClick={() => setDateFilter('all')}>All</button>
+                  <button className={`sd-filter-tab ${dateFilter === 'today' ? 'active' : ''}`} onClick={() => setDateFilter('today')}>Today</button>
+                  <button className={`sd-filter-tab ${dateFilter === 'upcoming' ? 'active' : ''}`} onClick={() => setDateFilter('upcoming')}>Upcoming</button>
+                </div>
+                <div className="sd-filter-actions">
+                  <div className="sd-view-toggle">
+                    <button className={viewMode === 'grid' ? 'active' : ''} onClick={() => setViewMode('grid')}>{ICONS.grid}</button>
+                    <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>{ICONS.list}</button>
+                  </div>
+                  <button className="sd-export-btn" onClick={handleExportCSV}>
+                    {ICONS.download} Export
+                  </button>
+                </div>
+              </div>
+
+              {/* Appointments Grid/List */}
+              <div className={viewMode === 'grid' ? 'sd-appointments-grid' : 'sd-appointments-list'}>
+                {filteredAppointments.length === 0 ? (
+                  <div className="sd-empty-state">
+                    {ICONS.calendar}
+                    <h3>No appointments found</h3>
+                    <p>There are no appointments matching your criteria.</p>
+                  </div>
+                ) : (
+                  filteredAppointments.map(apt => {
+                    const overdueHours = apt.status === 'Pending' ? getOverdueHours(apt.appointment_date) : 0;
+                    const isUrgent = overdueHours > 24;
+                    
+                    return (
+                      <div key={apt.id} className={`sd-appt-card ${isUrgent ? 'urgent' : ''}`}>
+                        <div className="sd-appt-header">
+                          <div className="sd-appt-avatar" style={{ 
+                            background: isUrgent ? 'var(--red-light)' : apt.status === 'Accepted' ? 'var(--green-light)' : apt.status === 'Declined' ? 'var(--red-light)' : 'var(--gold-light)',
+                            color: isUrgent ? 'var(--red-dark)' : apt.status === 'Accepted' ? 'var(--green-dark)' : apt.status === 'Declined' ? 'var(--red-dark)' : 'var(--gold-dark)'
+                          }}>
+                            {getInitials(apt.visitor_name)}
+                          </div>
+                          <span className={`sd-badge sd-badge-${apt.status?.toLowerCase()}`}>{apt.status}</span>
+                        </div>
+                        
+                        <div className="sd-appt-body">
+                          <h4 className="sd-appt-name">{apt.visitor_name}</h4>
+                          <p className="sd-appt-email">{apt.visitor_email}</p>
+                          
+                          <div className="sd-appt-details">
+                            <div className="sd-appt-detail">
+                              {ICONS.calendar}
+                              <span>{formatDate(apt.appointment_date)}</span>
+                            </div>
+                            <div className="sd-appt-detail">
+                              {ICONS.clock}
+                              <span>{formatTime(apt.appointment_date)}</span>
+                            </div>
+                            {apt.service?.name && (
+                              <div className="sd-appt-detail">
+                                {ICONS.activity}
+                                <span>{apt.service.name}</span>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {apt.message && (
+                            <p className="sd-appt-message">"{apt.message}"</p>
+                          )}
+                        </div>
+
+                        {apt.status === 'Pending' ? (
+                          <div className="sd-appt-actions">
+                            <button className="sd-btn sd-btn-accept" onClick={() => openResponseArea(apt.id, 'Accepted')}>Accept</button>
+                            <button className="sd-btn sd-btn-reschedule" onClick={() => openResponseArea(apt.id, 'Rescheduled')}>Reschedule</button>
+                            <button className="sd-btn sd-btn-decline" onClick={() => openResponseArea(apt.id, 'Declined')}>Decline</button>
+                          </div>
+                        ) : (
+                          <div className="sd-appt-actions">
+                            <button className="sd-btn sd-btn-view" onClick={() => openPreview(apt)}>View Details</button>
+                          </div>
+                        )}
+
+                        {/* Response Area */}
+                        {responseAreaOpen[apt.id] && (
+                          <div className="sd-response-area">
+                            <textarea 
+                              placeholder="Add a response note (optional)..."
+                              value={responseNote[apt.id] || ''}
+                              onChange={(e) => setResponseNote(prev => ({ ...prev, [apt.id]: e.target.value }))}
+                              rows="2"
+                            />
+                            <div className="sd-response-actions">
+                              <button 
+                                className="sd-btn sd-btn-accept"
+                                onClick={() => {
+                                  requestStatusUpdate(apt.id, apt.visitor_name, responseAction[apt.id] || 'Accepted');
+                                }}
+                              >
+                                Send & {responseAction[apt.id] || 'Accept'}
+                              </button>
+                              <button className="sd-btn sd-btn-view" onClick={() => closeResponseArea(apt.id)}>Cancel</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </>
+          )}
+
+          {activeTab === 'schedule' && (
+            <div className="sd-schedule-view">
+              <div className="sd-panel">
+                <div className="sd-panel-header">
+                  <h3>{ICONS.calendar} Today's Schedule</h3>
+                </div>
+                <div className="sd-timeline">
+                  {appointments.filter(a => a.appointment_date.startsWith(today)).length === 0 ? (
+                    <div className="sd-empty">No appointments scheduled for today</div>
+                  ) : (
+                    appointments
+                      .filter(a => a.appointment_date.startsWith(today))
+                      .sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date))
+                      .map(apt => (
+                        <div key={apt.id} className="sd-timeline-item">
+                          <div className="sd-timeline-time">{formatTime(apt.appointment_date)}</div>
+                          <div className="sd-timeline-dot"></div>
+                          <div className="sd-timeline-content">
+                            <div className="sd-timeline-name">{apt.visitor_name}</div>
+                            <div className="sd-timeline-meta">{apt.service?.name || 'Appointment'}</div>
+                          </div>
+                          <span className={`sd-badge sd-badge-${apt.status?.toLowerCase()}`}>{apt.status}</span>
+                        </div>
+                      ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'settings' && (
+            <div className="sd-settings-view">
+              <div className="sd-panel">
+                <div className="sd-panel-header">
+                  <h3>{ICONS.settings} Settings</h3>
+                </div>
+                <div className="sd-settings-content">
+                  <div className="sd-setting-item">
+                    <div className="sd-setting-info">
+                      <h4>Profile Information</h4>
+                      <p>Update your personal information</p>
+                    </div>
+                    <div className="sd-setting-value">
+                      <span>{user?.full_name}</span>
+                      <span>{user?.email}</span>
+                    </div>
+                  </div>
+                  <div className="sd-setting-item">
+                    <div className="sd-setting-info">
+                      <h4>Department</h4>
+                      <p>Your assigned department</p>
+                    </div>
+                    <div className="sd-setting-value">
+                      <span>{user?.department_name || 'Not assigned'}</span>
+                    </div>
+                  </div>
+                  <div className="sd-setting-item">
+                    <div className="sd-setting-info">
+                      <h4>Session</h4>
+                      <p>Auto-refresh appointments every 15 seconds</p>
+                    </div>
+                    <button className="sd-btn sd-btn-view" onClick={handleLogout}>Sign Out</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Preview Modal */}
+      {previewItem && (
+        <div className="sd-modal-overlay" onClick={closePreview}>
+          <div className="sd-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="sd-modal-header">
+              <h3>Appointment Details</h3>
+              <button onClick={closePreview}>{ICONS.x}</button>
+            </div>
+            <div className="sd-modal-body">
+              <div className="sd-modal-avatar" style={{ 
+                background: previewItem.status === 'Pending' ? 'var(--gold-light)' : 
+                           previewItem.status === 'Accepted' ? 'var(--green-light)' : 'var(--red-light)',
+                color: previewItem.status === 'Pending' ? 'var(--gold-dark)' : 
+                       previewItem.status === 'Accepted' ? 'var(--green-dark)' : 'var(--red-dark)'
+              }}>
+                {getInitials(previewItem.visitor_name)}
+              </div>
+              <h4>{previewItem.visitor_name}</h4>
+              <p className="sd-modal-email">{previewItem.visitor_email}</p>
+              
+              <div className="sd-modal-details">
+                <div className="sd-modal-detail">
+                  <span>Date</span>
+                  <strong>{formatDate(previewItem.appointment_date)}</strong>
+                </div>
+                <div className="sd-modal-detail">
+                  <span>Time</span>
+                  <strong>{formatTime(previewItem.appointment_date)}</strong>
+                </div>
+                <div className="sd-modal-detail">
+                  <span>Status</span>
+                  <span className={`sd-badge sd-badge-${previewItem.status?.toLowerCase()}`}>{previewItem.status}</span>
+                </div>
+              </div>
+
+              {previewItem.message && (
+                <div className="sd-modal-section">
+                  <h5>Visitor Message</h5>
+                  <p>{previewItem.message}</p>
+                </div>
+              )}
+
+              {previewItem.response_note && (
+                <div className="sd-modal-section">
+                  <h5>Staff Response</h5>
+                  <p>{previewItem.response_note}</p>
+                </div>
+              )}
+            </div>
+            <div className="sd-modal-footer">
+              <button className="sd-btn sd-btn-view" onClick={closePreview}>Close</button>
+              {previewItem.status === 'Pending' && (
+                <>
+                  <button className="sd-btn sd-btn-accept" onClick={() => { closePreview(); openResponseArea(previewItem.id, 'Accepted'); }}>Accept</button>
+                  <button className="sd-btn sd-btn-decline" onClick={() => { closePreview(); openResponseArea(previewItem.id, 'Declined'); }}>Decline</button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Modal */}
       <ConfirmModal
         isOpen={Boolean(pendingStatusUpdate)}
         title={`Confirm ${pendingStatusUpdate?.status || ''}`}
@@ -354,64 +1077,21 @@ export default function StaffDashboardPage() {
           setPendingStatusUpdate(null);
         }}
       />
-      {toast && <div className="toast toast-success">{toast}</div>}
+
+      {/* Delete Modal */}
       <ConfirmModal
         isOpen={Boolean(pendingDelete)}
         title="Delete Appointment(s)?"
         message={
           pendingDelete?.type === 'single'
-            ? 'Delete this appointment card from your dashboard?'
-            : `Delete ${pendingDelete?.ids?.length || 0} selected appointment cards from your dashboard?`
+            ? 'Delete this appointment?'
+            : `Delete ${pendingDelete?.ids?.length || 0} selected appointments?`
         }
         confirmText="Delete"
         tone="danger"
         onConfirm={confirmDelete}
         onCancel={() => setPendingDelete(null)}
       />
-      {previewItem && (
-        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Appointment preview">
-          <div className="modal-card preview-card">
-            <h3>{previewItem.visitor_name}</h3>
-            <p>{previewItem.visitor_email}</p>
-            <p>
-              {new Date(previewItem.appointment_date).toLocaleString('en-KE', {
-                year: 'numeric',
-                month: 'short',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false,
-                timeZone: 'Africa/Nairobi',
-              })}
-            </p>
-            <p>{previewItem.message || 'No visitor message.'}</p>
-            <div className="modal-actions">
-              <button type="button" className="btn-muted" onClick={() => setPreviewItem(null)}>
-                Close
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  toggleSelected(previewItem.id);
-                  setPreviewItem(null);
-                }}
-              >
-                {selectedIds.includes(previewItem.id) ? 'Unselect' : 'Select'}
-              </button>
-              <button
-                type="button"
-                className="btn-danger"
-                onClick={() => {
-                  setPreviewItem(null);
-                  requestDeleteSingle(previewItem.id);
-                }}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

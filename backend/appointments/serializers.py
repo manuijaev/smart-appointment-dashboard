@@ -74,4 +74,11 @@ class AppointmentUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Appointment
-        fields = ['status', 'response_note', 'appointment_date']
+        fields = ['status', 'response_note', 'appointment_date', 'staff_member']
+
+
+class AppointmentReassignSerializer(serializers.ModelSerializer):
+    """Serializer for admin to reassign appointments to different staff."""
+    class Meta:
+        model = Appointment
+        fields = ['staff_member']

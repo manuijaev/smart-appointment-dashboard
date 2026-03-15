@@ -1,4 +1,4 @@
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -12,6 +12,8 @@ from .serializers import (
     StaffLoginSerializer,
     StaffManageSerializer,
     StaffRegisterSerializer,
+    StaffCreateSerializer,
+    PasswordResetSerializer,
 )
 
 
@@ -34,8 +36,9 @@ class StaffByDepartmentListView(generics.ListAPIView):
 
 
 class StaffRegisterView(generics.CreateAPIView):
+    """Self-registration is disabled. Use admin-created accounts only."""
     serializer_class = StaffRegisterSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [IsAdminRole]
 
 
 class StaffLoginView(TokenObtainPairView):
@@ -70,7 +73,7 @@ class StaffDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAdminRole]
 
     def get_queryset(self):
-        return User.objects.filter(role=User.Role.STAFF).order_by('id')
+        return User.objects.filter(role__in=[User.Role.STAFF, User.Role.ADMIN]).order_by('id')
 
     def perform_destroy(self, instance):
         if instance.id == self.request.user.id:
@@ -83,7 +86,7 @@ class StaffDeactivateView(generics.UpdateAPIView):
     permission_classes = [IsAdminRole]
 
     def get_queryset(self):
-        return User.objects.filter(role=User.Role.STAFF)
+        return User.objects.filter(role__in=[User.Role.STAFF, User.Role.ADMIN])
 
     def update(self, request, *args, **kwargs):
         staff_user = self.get_object()
@@ -92,3 +95,61 @@ class StaffDeactivateView(generics.UpdateAPIView):
         staff_user.is_active = False
         staff_user.save(update_fields=['is_active'])
         return Response({'message': 'Staff account deactivated'})
+
+
+class StaffActivateView(generics.UpdateAPIView):
+    """Admin-only endpoint to activate a staff or admin account."""
+    serializer_class = StaffManageSerializer
+    permission_classes = [IsAdminRole]
+
+    def get_queryset(self):
+        return User.objects.filter(role__in=[User.Role.STAFF, User.Role.ADMIN])
+
+    def update(self, request, *args, **kwargs):
+        staff_user = self.get_object()
+        staff_user.is_active = True
+        staff_user.save(update_fields=['is_active'])
+        return Response({'message': 'Staff account activated'})
+
+
+class StaffCreateView(generics.CreateAPIView):
+    """
+    Admin-only endpoint to create staff or admin accounts.
+    Generates a temporary password that must be changed on first login.
+    """
+    serializer_class = StaffCreateSerializer
+    permission_classes = [IsAdminRole]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        staff_user = serializer.save()
+        return Response({
+            'message': 'Staff account created successfully',
+            'staff': StaffManageSerializer(staff_user).data,
+            'temp_password': serializer.get_temp_password()
+        }, status=status.HTTP_201_CREATED)
+
+
+class StaffResetPasswordView(generics.UpdateAPIView):
+    """
+    Admin-only endpoint to reset a staff member's password.
+    Generates a new temporary password.
+    """
+    serializer_class = PasswordResetSerializer
+    permission_classes = [IsAdminRole]
+
+    def get_queryset(self):
+        return User.objects.filter(role__in=[User.Role.STAFF, User.Role.ADMIN])
+
+    def update(self, request, *args, **kwargs):
+        staff_user = self.get_object()
+        if staff_user.id == request.user.id:
+            return Response({'detail': 'You cannot reset your own password through this endpoint.'}, status=403)
+        serializer = self.get_serializer(staff_user, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({
+            'message': 'Password reset successfully',
+            'temp_password': serializer.get_temp_password()
+        })

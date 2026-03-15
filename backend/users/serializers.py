@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+import secrets
 
 from .models import User
 
@@ -60,6 +61,104 @@ class StaffManageSerializer(serializers.ModelSerializer):
         if department and division and division.department_id != department.id:
             raise serializers.ValidationError({'division': 'Selected division does not belong to this department.'})
         return attrs
+
+
+class StaffCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for admin to create staff accounts.
+    Generates a temporary password and can send welcome email.
+    """
+    password = serializers.CharField(write_only=True, min_length=8, required=False)
+    send_welcome_email = serializers.BooleanField(default=False, write_only=True)
+
+    class Meta:
+        model = User
+        fields = [
+            'id',
+            'full_name',
+            'email',
+            'department',
+            'division',
+            'role',
+            'password',
+            'send_welcome_email',
+        ]
+        read_only_fields = ['id']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._temp_password = None
+
+    def get_temp_password(self):
+        return self._temp_password
+
+    def validate(self, attrs):
+        department = attrs.get('department')
+        division = attrs.get('division')
+        if department and division and division.department_id != department.id:
+            raise serializers.ValidationError({'division': 'Selected division does not belong to this department.'})
+        # Generate temp password if not provided
+        if not attrs.get('password'):
+            self._temp_password = self._generate_temp_password()
+            attrs['password'] = self._temp_password
+        return attrs
+
+    def _generate_temp_password(self):
+        """Generate a secure temporary password."""
+        chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!'
+        return ''.join(secrets.choice(chars) for _ in range(10))
+
+    def create(self, validated_data):
+        send_welcome = validated_data.pop('send_welcome_email', False)
+        password = validated_data.pop('password')
+        role = validated_data.get('role', User.Role.STAFF)
+        is_staff_flag = role == User.Role.ADMIN
+
+        user = User.objects.create_user(
+            password=password,
+            is_staff=is_staff_flag,
+            **validated_data
+        )
+
+        # TODO: Send welcome email if send_welcome is True
+        # This would integrate with the notification service
+
+        return user
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    """
+    Serializer for admin to reset staff password.
+    Generates a new temporary password.
+    """
+    password = serializers.CharField(write_only=True, min_length=8, required=False)
+
+    class Meta:
+        fields = ['password']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._temp_password = None
+
+    def get_temp_password(self):
+        return self._temp_password
+
+    def validate(self, attrs):
+        if not attrs.get('password'):
+            self._temp_password = self._generate_temp_password()
+            attrs['password'] = self._temp_password
+        return attrs
+
+    def _generate_temp_password(self):
+        """Generate a secure temporary password."""
+        chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!'
+        return ''.join(secrets.choice(chars) for _ in range(10))
+
+    def save(self):
+        user = self.instance
+        user.set_password(self._temp_password)
+        user.save(update_fields=['password'])
+        return user
 
 
 class StaffLoginSerializer(TokenObtainPairSerializer):

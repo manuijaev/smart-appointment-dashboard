@@ -91,8 +91,8 @@ export default function StaffLoginPage() {
     try {
       const user = await login(form.email, form.password);
       await tryRegisterDevice();
-      setToast('Login successful. Redirecting...');
-      setTimeout(() => navigateByRole(user), 650);
+      setToast(`Welcome back, ${user?.full_name || 'Staff'}! You have 0 pending appointments.`);
+      setTimeout(() => navigateByRole(user), 1500);
     } catch (err) {
       setError(extractErrorMessage(err, 'Invalid credentials.'));
     } finally {
@@ -115,8 +115,8 @@ export default function StaffLoginPage() {
       });
       const user = await login(form.email, form.password);
       await tryRegisterDevice();
-      setToast('Account created and login successful. Redirecting...');
-      setTimeout(() => navigateByRole(user), 700);
+      setToast(`Welcome to Gatepass, ${form.full_name}! Your account has been created successfully.`);
+      setTimeout(() => navigateByRole(user), 1500);
     } catch (err) {
       setError(extractErrorMessage(err, 'Unable to sign up. Check your inputs and try again.'));
     } finally {

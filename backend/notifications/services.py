@@ -3,8 +3,6 @@ import logging
 from django.conf import settings
 from django.core.mail import get_connection
 from django.core.mail import send_mail
-from google.auth.transport.requests import Request
-from google.oauth2 import service_account
 
 logger = logging.getLogger(__name__)
 
@@ -62,26 +60,7 @@ def send_fcm_push_notification(fcm_token, title, body):
     if not fcm_token:
         return {'sent': False, 'reason': 'missing_staff_fcm_token'}
 
-    # Prefer modern FCM HTTP v1 when service-account credentials are configured.
-    if settings.FIREBASE_PROJECT_ID and settings.FIREBASE_CLIENT_EMAIL and settings.FIREBASE_PRIVATE_KEY:
-        try:
-            v1_result = _send_fcm_push_notification_v1(fcm_token, title, body)
-            if v1_result.get('sent'):
-                return v1_result
-            if not settings.FIREBASE_SERVER_KEY:
-                return v1_result
-            logger.warning('FCM v1 send failed; falling back to legacy API. reason=%s', v1_result.get('reason'))
-        except Exception as exc:
-            if not settings.FIREBASE_SERVER_KEY:
-                return {
-                    'sent': False,
-                    'reason': 'firebase_v1_exception',
-                    'error': str(exc)[:300],
-                    'api': 'fcm_v1',
-                }
-            logger.exception('FCM v1 send raised exception; falling back to legacy API')
-
-    # Fallback to legacy server-key auth if still configured.
+    # Legacy server-key auth only (Google auth disabled).
     if not settings.FIREBASE_SERVER_KEY:
         return {'sent': False, 'reason': 'missing_firebase_credentials'}
 
@@ -119,72 +98,3 @@ def send_fcm_push_notification(fcm_token, title, body):
         }
     except requests.RequestException as exc:
         return {'sent': False, 'reason': 'firebase_request_exception', 'error': str(exc)[:300]}
-
-
-def _send_fcm_push_notification_v1(fcm_token, title, body):
-    credentials_info = {
-        'type': 'service_account',
-        'project_id': settings.FIREBASE_PROJECT_ID,
-        'private_key': settings.FIREBASE_PRIVATE_KEY,
-        'client_email': settings.FIREBASE_CLIENT_EMAIL,
-        'token_uri': 'https://oauth2.googleapis.com/token',
-    }
-
-    credentials = service_account.Credentials.from_service_account_info(
-        credentials_info,
-        scopes=['https://www.googleapis.com/auth/firebase.messaging'],
-    )
-    credentials.refresh(Request())
-
-    headers = {
-        'Authorization': f'Bearer {credentials.token}',
-        'Content-Type': 'application/json; charset=UTF-8',
-    }
-    payload = {
-        'message': {
-            'token': fcm_token,
-            'notification': {
-                'title': title,
-                'body': body,
-            },
-            'webpush': {
-                'headers': {
-                    'Urgency': 'high',
-                    'TTL': '300',
-                },
-                'fcm_options': {
-                    'link': '/staff/dashboard',
-                },
-                'notification': {
-                    'title': title,
-                    'body': body,
-                    'icon': '/favicon.ico',
-                    'requireInteraction': True,
-                    'tag': 'appointment-update',
-                },
-            },
-            'data': {
-                'title': title,
-                'body': body,
-                'click_action': '/staff/dashboard',
-                'url': '/staff/dashboard',
-            },
-        }
-    }
-
-    url = f'https://fcm.googleapis.com/v1/projects/{settings.FIREBASE_PROJECT_ID}/messages:send'
-    try:
-        response = requests.post(url, json=payload, headers=headers, timeout=10)
-        if response.ok:
-            return {'sent': True, 'status_code': response.status_code, 'api': 'fcm_v1'}
-        body_text = response.text[:500]
-        return {
-            'sent': False,
-            'reason': 'firebase_send_failed',
-            'status_code': response.status_code,
-            'body': body_text,
-            'invalid_token': 'UNREGISTERED' in body_text or 'registration-token-not-registered' in body_text,
-            'api': 'fcm_v1',
-        }
-    except requests.RequestException as exc:
-        return {'sent': False, 'reason': 'firebase_request_exception', 'error': str(exc)[:300], 'api': 'fcm_v1'}

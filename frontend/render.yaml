@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: smart-appointment-frontend
+    env: static
+    buildCommand: npm run build
+    staticPublishDirectory: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://smart-appointment-dashboard-5gtq.onrender.com/api
+      - key: VITE_FIREBASE_API_KEY
+        value: AIzaSyARImn1PZFiC05t-GEJu-C7jBr33Td7TeY
+      - key: VITE_FIREBASE_AUTH_DOMAIN
+        value: smart-appointment-dashboard.firebaseapp.com
+      - key: VITE_FIREBASE_PROJECT_ID
+        value: smart-appointment-dashboard
+      - key: VITE_FIREBASE_MESSAGING_SENDER_ID
+        value: 922463755380
+      - key: VITE_FIREBASE_APP_ID
+        value: 1:922463755380:web:1380e72efd79be807f4521
+      - key: VITE_FIREBASE_VAPID_KEY
+        value: BPrH_mGHo2mRWWjB3bqzv1b7UPlgmYKJ03YtdocIuI7SZMMMz1RmXhUq2Xbjk1upSLYRVb9ymzLszuV763_shDo
+      - key: VITE_EMAILJS_SERVICE_ID
+        value: service_09gos1g
+      - key: VITE_EMAILJS_REQUEST_TEMPLATE_ID
+        value: template_n6y2krc
+      - key: VITE_EMAILJS_RESPONSE_TEMPLATE_ID
+        value: template_yy8nqrn
+      - key: VITE_EMAILJS_PUBLIC_KEY
+        value: yDT-1qLxnqvSg8eOr

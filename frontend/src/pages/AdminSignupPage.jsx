@@ -147,8 +147,8 @@ export default function AdminSignupPage() {
             </form>
             <div className="auth-mini-links">
               <span>Already have admin credentials?</span>
-              <Link to="/admin/login" className="auth-text-link">
-                Go to Admin Login
+              <Link to="/staff/login" className="auth-text-link">
+                Go to Staff Login
               </Link>
             </div>
           </section>

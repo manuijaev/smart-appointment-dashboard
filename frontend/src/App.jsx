@@ -3,7 +3,6 @@ import HomePage from './pages/HomePage';
 import StaffLoginPage from './pages/StaffLoginPage';
 import StaffDashboardPage from './pages/StaffDashboardPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
-import AdminLoginPage from './pages/AdminLoginPage';
 import { useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 
@@ -45,14 +44,6 @@ export default function App() {
           }
         />
         <Route
-          path="/admin/login"
-          element={
-            <PublicOnlyRoute>
-              <AdminLoginPage />
-            </PublicOnlyRoute>
-          }
-        />
-        <Route
           path="/staff/dashboard"
           element={
             <ProtectedRoute roles={['Staff', 'Admin']}>
@@ -63,7 +54,7 @@ export default function App() {
         <Route
           path="/admin/dashboard"
           element={
-            <ProtectedRoute roles={['Admin']} loginPath="/admin/login">
+            <ProtectedRoute roles={['Admin']} loginPath="/staff/login">
               <AdminDashboardPage />
             </ProtectedRoute>
           }
