@@ -14,6 +14,7 @@ def _build_email_connection():
 
 def send_appointment_email(staff_email, visitor_name, appointment_date, message):
     if not staff_email:
+        logger.warning('send_appointment_email skipped: no staff_email provided')
         return
 
     subject = 'New Appointment Request'
@@ -23,14 +24,19 @@ def send_appointment_email(staff_email, visitor_name, appointment_date, message)
         f'Message: {message or "No message provided."}\n'
     )
 
-    send_mail(
-        subject,
-        body,
-        settings.DEFAULT_FROM_EMAIL,
-        [staff_email],
-        fail_silently=True,
-        connection=_build_email_connection(),
-    )
+    try:
+        send_mail(
+            subject,
+            body,
+            settings.DEFAULT_FROM_EMAIL,
+            [staff_email],
+            fail_silently=False,
+            connection=_build_email_connection(),
+        )
+        logger.info(f'Appointment email sent successfully to {staff_email}')
+    except Exception as e:
+        logger.error(f'Failed to send email to {staff_email}: {str(e)}')
+        raise
 
 
 def send_appointment_response_email(visitor_email, visitor_name, status, response_note, appointment_date, staff_name):
