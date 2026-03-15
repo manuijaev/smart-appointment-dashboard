@@ -139,39 +139,9 @@ export default function StaffLoginPage() {
             <div className="hero">
               <h1>Staff Access</h1>
             </div>
-            <p className="page-subtitle">Sign in to manage appointments or create a new staff profile.</p>
-            <form className="card" onSubmit={mode === 'login' ? submitLogin : submitSignup}>
-              <div className="mode-switch">
-                <button
-                  type="button"
-                  className={mode === 'login' ? 'mode-btn active' : 'mode-btn'}
-                  onClick={() => setMode('login')}
-                >
-                  Login
-                </button>
-                <button
-                  type="button"
-                  className={mode === 'signup' ? 'mode-btn active' : 'mode-btn'}
-                  onClick={() => setMode('signup')}
-                >
-                  Sign Up
-                </button>
-              </div>
-
+            <p className="page-subtitle">Sign in to manage appointments.</p>
+            <form className="card" onSubmit={submitLogin}>
               <div className="form-grid">
-                {mode === 'signup' && (
-                  <div className="field-group full">
-                    <label className="field-label" htmlFor="full_name">Full Name</label>
-                    <input
-                      id="full_name"
-                      name="full_name"
-                      placeholder="Full Name"
-                      value={form.full_name}
-                      onChange={onChange}
-                      required
-                    />
-                  </div>
-                )}
                 <div className="field-group">
                   <label className="field-label" htmlFor="staff_email">Email</label>
                   <input
@@ -194,53 +164,14 @@ export default function StaffLoginPage() {
                     placeholder="Password"
                     value={form.password}
                     onChange={onChange}
-                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                    autoComplete="current-password"
                     minLength={8}
                     required
                   />
                 </div>
-                {mode === 'signup' && (
-                  <div className="field-group">
-                    <label className="field-label" htmlFor="staff_department">Department</label>
-                    <select id="staff_department" name="department" value={form.department} onChange={onChange} required>
-                      <option value="">Select Department</option>
-                      {departments.map((dep) => (
-                        <option key={dep.id} value={dep.id}>
-                          {dep.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                {mode === 'signup' && (
-                  <div className="field-group">
-                    <label className="field-label" htmlFor="staff_division">Division</label>
-                    <select
-                      id="staff_division"
-                      name="division"
-                      value={form.division}
-                      onChange={onChange}
-                      required
-                      disabled={!form.department}
-                    >
-                      <option value="">Select Division</option>
-                      {divisions.map((div) => (
-                        <option key={div.id} value={div.id}>
-                          {div.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
                 <div className="field-group full">
                   <button type="submit" disabled={isSubmitting}>
-                    {mode === 'login'
-                      ? isSubmitting
-                        ? 'Authenticating...'
-                        : 'Login'
-                      : isSubmitting
-                      ? 'Creating account...'
-                      : 'Create Account'}
+                    {isSubmitting ? 'Authenticating...' : 'Login'}
                   </button>
                 </div>
               </div>
