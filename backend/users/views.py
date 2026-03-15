@@ -36,9 +36,12 @@ class StaffByDepartmentListView(generics.ListAPIView):
 
 
 class StaffRegisterView(generics.CreateAPIView):
-    """Self-registration is disabled. Use admin-created accounts only."""
+    """
+    Self-registration is disabled. Use admin-created accounts only.
+    However, if no admin exists, the first admin can self-register.
+    """
     serializer_class = StaffRegisterSerializer
-    permission_classes = [IsAdminRole]
+    permission_classes = [permissions.AllowAny]
 
 
 class StaffLoginView(TokenObtainPairView):

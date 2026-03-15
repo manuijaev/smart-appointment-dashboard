@@ -27,3 +27,6 @@ services:
         value: template_yy8nqrn
       - key: VITE_EMAILJS_PUBLIC_KEY
         value: yDT-1qLxnqvSg8eOr
+    routes:
+      - src: /(.*)
+        dest: /index.html

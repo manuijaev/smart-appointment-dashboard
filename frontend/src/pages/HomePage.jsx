@@ -1344,7 +1344,7 @@ export default function HomePage() {
           <a>Terms of Use</a>
           <a>Contact Support</a>
           <a onClick={() => navigate('/staff/login')}>Staff Login</a>
-          <a onClick={() => navigate('/staff/login')}>Admin Login</a>
+          <a onClick={() => navigate('/admin/signup')}>Admin Signup</a>
         </div>
         <div className="footer-copy">2026 Gatepass. All rights reserved.</div>
       </footer>
