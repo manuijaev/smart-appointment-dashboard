@@ -29,7 +29,10 @@ export default function Navbar() {
             Home
           </NavLink>
           <NavLink to="/staff/login" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
-            Staff / Admin Login
+            Staff Login
+          </NavLink>
+          <NavLink to="/admin/signup" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+            Admin Signup
           </NavLink>
         </div>
       </div>
@@ -38,7 +41,10 @@ export default function Navbar() {
           Home
         </NavLink>
         <NavLink to="/staff/login" onClick={() => setMobileOpen(false)} className="nav-link">
-          Staff / Admin Login
+          Staff Login
+        </NavLink>
+        <NavLink to="/admin/signup" onClick={() => setMobileOpen(false)} className="nav-link">
+          Admin Signup
         </NavLink>
       </div>
     </nav>
