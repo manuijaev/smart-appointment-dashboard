@@ -160,7 +160,9 @@ export default function HomePage() {
   const [toast, setToast] = useState('');
   const [unavailableByDate, setUnavailableByDate] = useState({});
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showBookingModal, setShowBookingModal] = useState(false);
   const [referenceNumber, setReferenceNumber] = useState('');
+  const [featureCarouselIndex, setFeatureCarouselIndex] = useState(0);
   const [isReceptionistMode, setIsReceptionistMode] = useState(true);
   const [homeNavOpen, setHomeNavOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -468,6 +470,8 @@ export default function HomePage() {
   const getDeptId = (member) => toId(member.department?.id ?? member.department_id ?? member.departmentId ?? member.department ?? null);
   const getDivisionId = (member) => toId(member.division?.id ?? member.division_id ?? member.divisionId ?? member.division ?? null);
   const getDeptNameFromId = (deptId) => departments.find(d => d.id === deptId)?.name || '';
+  const getDivisionNameFromId = (divId) => divisions.find(d => d.id === divId)?.name || '';
+  const getStaffNameFromId = (staffId) => allStaff.find(s => s.id === staffId)?.full_name || allStaff.find(s => s.id === staffId)?.first_name || '';
 
   const splitFullName = (value = '') => {
     const parts = value.trim().split(' ').filter(Boolean);
@@ -548,7 +552,7 @@ export default function HomePage() {
       divisionName: member.division?.name || '',
     });
     setCurrentStep(1);
-    document.querySelector('.hero-right')?.scrollIntoView({ behavior: 'smooth' });
+    setShowBookingModal(true);
   };
 
   const normalizedGlobalTerm = normalize(globalSearchTerm).trim();
@@ -666,7 +670,7 @@ export default function HomePage() {
           </p>
 
           <div className="hero-cta-row">
-            <button className="cta-primary" onClick={() => document.querySelector('.hero-right').scrollIntoView({ behavior: 'smooth' })}>
+            <button className="cta-primary" onClick={() => setShowBookingModal(true)}>
               <span className="icon" aria-hidden="true">{ICONS.clipboard}</span>
               Book an Appointment
             </button>
@@ -1352,6 +1356,308 @@ export default function HomePage() {
       {toast && (
         <div className="toast" id="toast">
           {toast}
+        </div>
+      )}
+
+      {/* Booking Modal */}
+      {showBookingModal && (
+        <div className="booking-modal-overlay" onClick={() => setShowBookingModal(false)}>
+          <div className="booking-modal" onClick={(e) => e.stopPropagation()}>
+            <button 
+              className="booking-modal-close" 
+              onClick={() => setShowBookingModal(false)}
+              aria-label="Close modal"
+            >
+              {ICONS.close}
+            </button>
+            <div className="booking-modal-content">
+              {!showSuccess ? (
+                <>
+                  <div className="form-panel-header">
+                    <div className="form-panel-title" style={{ color: '#ffffff' }}>Confirm an Appointment</div>
+                    <div className="form-panel-sub">Fill in each step below. Takes less than 2 minutes.</div>
+                  </div>
+                  {prefillSelection && (
+                    <div className="prefill-banner">
+                      Booking with <strong>{prefillSelection.staffName}</strong> · {prefillSelection.departmentName}
+                      {prefillSelection.divisionName ? ` · ${prefillSelection.divisionName}` : ''}
+                    </div>
+                  )}
+
+                  {/* Progress Steps */}
+                  <div className="progress-steps" id="progressSteps">
+                    {[1, 2, 3, 4, 5, 6, 7].map((step) => (
+                      <div key={step}>
+                        <div 
+                          className={`step-dot ${currentStep === step ? 'active' : ''} ${currentStep > step ? 'done' : ''}`}
+                        >
+                          {currentStep > step ? '\u2713' : step}
+                        </div>
+                        {step < 7 && <div className="step-spacer"></div>}
+                      </div>
+                    ))}
+                    <div 
+                      className="progress-fill" 
+                      id="progressFill" 
+                      style={{ width: `${((currentStep - 1) / (totalSteps - 1)) * 82}%` }}
+                    ></div>
+                  </div>
+
+                  {/* Step 1: Name */}
+                  <div className={`step-view ${currentStep === 1 ? 'active' : ''}`} id="step1">
+                    <div className="step-label">Step 1 of 7 - Your Identity</div>
+                    <div className="field">
+                      <label className="field-label">Full Name <span className="field-required">*</span></label>
+                      <input 
+                        type="text" 
+                        className={`field-input ${validation.nameValid ? 'valid' : ''}`}
+                        placeholder="e.g. Sarah Kiprono"
+                        value={formData.visitor_name}
+                        onChange={(e) => handleInputChange('visitor_name', e.target.value)}
+                      />
+                      <div className="field-hint">Enter your full name as it appears on your ID</div>
+                    </div>
+                    <div className="field">
+                      <label className="field-label">Phone Number <span className="field-required">*</span></label>
+                      <input 
+                        type="tel" 
+                        className="field-input"
+                        placeholder="e.g. +254712345678"
+                        value={formData.phone}
+                        onChange={(e) => handleInputChange('phone', e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Step 2: Email */}
+                  <div className={`step-view ${currentStep === 2 ? 'active' : ''}`} id="step2">
+                    <div className="step-label">Step 2 of 7 - Contact Details</div>
+                    <div className="field">
+                      <label className="field-label">Email Address <span className="field-required">*</span></label>
+                      <input 
+                        type="email" 
+                        className={`field-input ${validation.emailValid ? 'valid' : ''} ${validation.emailError ? 'error' : ''}`}
+                        placeholder="e.g. sarah@example.com"
+                        value={formData.visitor_email}
+                        onChange={(e) => handleInputChange('visitor_email', e.target.value)}
+                      />
+                      <div className="field-hint">We'll send confirmation to this email</div>
+                    </div>
+                  </div>
+
+                  {/* Step 3: Department */}
+                  <div className={`step-view ${currentStep === 3 ? 'active' : ''}`} id="step3">
+                    <div className="step-label">Step 3 of 7 - Department</div>
+                    <div className="field">
+                      <label className="field-label">Select Department <span className="field-required">*</span></label>
+                      <select 
+                        className="field-input field-select"
+                        value={formData.department}
+                        onChange={(e) => handleInputChange('department', e.target.value)}
+                      >
+                        <option value="">Choose a department...</option>
+                        {departments.map(dept => (
+                          <option key={dept.id} value={dept.id}>{dept.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Step 4: Division */}
+                  <div className={`step-view ${currentStep === 4 ? 'active' : ''}`} id="step4">
+                    <div className="step-label">Step 4 of 7 - Division</div>
+                    <div className="field">
+                      <label className="field-label">Select Division (Optional)</label>
+                      <select 
+                        className="field-input field-select"
+                        value={formData.division}
+                        onChange={(e) => handleInputChange('division', e.target.value)}
+                      >
+                        <option value="">All Divisions</option>
+                        {divisions.map(div => (
+                          <option key={div.id} value={div.id}>{div.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Step 5: Staff */}
+                  <div className={`step-view ${currentStep === 5 ? 'active' : ''}`} id="step5">
+                    <div className="step-label">Step 5 of 7 - Select Staff Member</div>
+                    <div className="field">
+                      <label className="field-label">Select Staff Member <span className="field-required">*</span></label>
+                      <select 
+                        className="field-input field-select"
+                        value={formData.staff_member}
+                        onChange={(e) => handleInputChange('staff_member', e.target.value)}
+                      >
+                        <option value="">Choose a staff member...</option>
+                        {(formData.division 
+                          ? allStaff.filter(s => getDivisionId(s) === parseInt(formData.division, 10)) 
+                          : formData.department 
+                            ? allStaff.filter(s => getDeptId(s) === parseInt(formData.department, 10))
+                            : allStaff
+                        ).map(member => (
+                          <option key={member.id} value={member.id}>
+                            {member.full_name || member.first_name} {member.is_available ? '' : '(Unavailable)'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Step 6: Date */}
+                  <div className={`step-view ${currentStep === 6 ? 'active' : ''}`} id="step6">
+                    <div className="step-label">Step 6 of 7 - Preferred Date & Time</div>
+                    <div className="field">
+                      <label className="field-label">Select Date & Time <span className="field-required">*</span></label>
+                      <input 
+                        type="datetime-local" 
+                        className={`field-input ${validation.dateValid ? 'valid' : ''} ${validation.dateError ? 'error' : ''}`}
+                        value={formData.appointment_date}
+                        onChange={(e) => handleInputChange('appointment_date', e.target.value)}
+                      />
+                      <div className="field-hint">Select a date and time for your appointment</div>
+                    </div>
+                  </div>
+
+                  {/* Step 7: Message */}
+                  <div className={`step-view ${currentStep === 7 ? 'active' : ''}`} id="step7">
+                    <div className="step-label">Step 7 of 7 - Your Message</div>
+                    <div className="field">
+                      <label className="field-label">Message (Optional)</label>
+                      <textarea 
+                        className="field-input field-textarea"
+                        placeholder="Briefly describe the purpose of your visit..."
+                        value={formData.message}
+                        onChange={(e) => handleInputChange('message', e.target.value)}
+                        rows={4}
+                      />
+                    </div>
+
+                    {/* Summary */}
+                    <div className="booking-summary">
+                      <div className="summary-title">Appointment Summary</div>
+                      <div className="summary-row"><span>Name:</span> <strong>{formData.visitor_name || '-'}</strong></div>
+                      <div className="summary-row"><span>Email:</span> <strong>{formData.visitor_email || '-'}</strong></div>
+                      <div className="summary-row"><span>Phone:</span> <strong>{formData.phone || '-'}</strong></div>
+                      <div className="summary-row"><span>Department:</span> <strong>{getDeptNameFromId(formData.department) || '-'}</strong></div>
+                      <div className="summary-row"><span>Division:</span> <strong>{getDivisionNameFromId(formData.division) || 'All'}</strong></div>
+                      <div className="summary-row"><span>Staff:</span> <strong>{getStaffNameFromId(formData.staff_member) || '-'}</strong></div>
+                      <div className="summary-row"><span>Date:</span> <strong>{formData.appointment_date ? new Date(formData.appointment_date).toLocaleString() : '-'}</strong></div>
+                    </div>
+                  </div>
+
+                  {/* Navigation Buttons */}
+                  <div className="step-nav">
+                    {currentStep > 1 && (
+                      <button type="button" className="btn-secondary" onClick={() => setCurrentStep(currentStep - 1)}>
+                        Back
+                      </button>
+                    )}
+                    {currentStep < 7 ? (
+                      <button 
+                        type="button" 
+                        className="btn-primary"
+                        onClick={() => {
+                          if (currentStep === 1 && !validation.nameValid) {
+                            showToastMessage('Please enter your full name');
+                            return;
+                          }
+                          if (currentStep === 2 && !validation.emailValid) {
+                            showToastMessage('Please enter a valid email');
+                            return;
+                          }
+                          if (currentStep === 6 && (!formData.appointment_date || !validation.dateValid || isNextDaySelection(formData.appointment_date))) {
+                            showToastMessage('Please select a valid date');
+                            return;
+                          }
+                          setCurrentStep(currentStep + 1);
+                        }}
+                      >
+                        Continue
+                      </button>
+                    ) : (
+                      <button 
+                        type="button" 
+                        className="btn-primary"
+                        onClick={submitBooking}
+                      >
+                        Confirm Appointment
+                      </button>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="success-view">
+                  <div className="success-animation">
+                    <div className="success-circle">
+                      <svg viewBox="0 0 52 52" className="success-checkmark">
+                        <circle className="success-circle-bg" cx="26" cy="26" r="25" fill="none"/>
+                        <path className="success-checkmark-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="success-title" style={{ color: '#ffffff' }}>Appointment Submitted!</div>
+                  <div className="success-desc">
+                    Your appointment request has been sent to <strong>{getStaffNameFromId(formData.staff_member)}</strong>
+                  </div>
+                  <div className="success-email">
+                    A confirmation email has been sent to <br/><strong>{formData.visitor_email}</strong>
+                  </div>
+                  <div className="success-ref">
+                    <span className="ref-label">Reference Number</span>
+                    <span className="ref-number">{referenceNumber}</span>
+                  </div>
+                  <div className="success-actions">
+                    <button 
+                      type="button" 
+                      className="btn-secondary"
+                      onClick={() => {
+                        setShowBookingModal(false);
+                        setShowSuccess(false);
+                        setCurrentStep(1);
+                        setFormData({
+                          visitor_name: '',
+                          visitor_email: '',
+                          phone: '',
+                          department: '',
+                          division: '',
+                          staff_member: '',
+                          appointment_date: '',
+                          message: '',
+                        });
+                        setPrefillSelection(null);
+                      }}
+                    >
+                      Back to Home
+                    </button>
+                    <button 
+                      type="button" 
+                      className="btn-primary"
+                      onClick={() => {
+                        setShowSuccess(false);
+                        setCurrentStep(1);
+                        setFormData({
+                          visitor_name: '',
+                          visitor_email: '',
+                          phone: '',
+                          department: '',
+                          division: '',
+                          staff_member: '',
+                          appointment_date: '',
+                          message: '',
+                        });
+                        setPrefillSelection(null);
+                      }}
+                    >
+                      Submit Another Request
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
