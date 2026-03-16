@@ -1,0 +1,9 @@
+Collecting ecdsa
+  Downloading ecdsa-0.19.1-py2.py3-none-any.whl.metadata (29 kB)
+Collecting six>=1.9.0 (from ecdsa)
+  Using cached six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+Downloading ecdsa-0.19.1-py2.py3-none-any.whl (150 kB)
+Using cached six-1.17.0-py2.py3-none-any.whl (11 kB)
+Installing collected packages: six, ecdsa
+
+Successfully installed ecdsa-0.19.1 six-1.17.0

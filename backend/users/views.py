@@ -2,6 +2,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django.conf import settings
 
 from .models import User
 from .models import UserDeviceToken
@@ -155,4 +156,18 @@ class StaffResetPasswordView(generics.UpdateAPIView):
         return Response({
             'message': 'Password reset successfully',
             'temp_password': serializer.get_temp_password()
+        })
+
+
+class VapidPublicKeyView(generics.RetrieveAPIView):
+    """
+    Public endpoint to get the VAPID public key for push notifications.
+    Frontend uses this key to generate FCM tokens for staff devices.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def retrieve(self, request, *args, **kwargs):
+        vapid_public_key = getattr(settings, 'VAPID_PUBLIC_KEY', None)
+        return Response({
+            'vapid_public_key': vapid_public_key,
         })

@@ -11,6 +11,7 @@ from .views import (
     StaffRegisterView,
     StaffResetPasswordView,
     UpdateFCMTokenView,
+    VapidPublicKeyView,
 )
 
 urlpatterns = [
@@ -24,4 +25,5 @@ urlpatterns = [
     path('staff/<int:pk>/reset-password/', StaffResetPasswordView.as_view(), name='staff-reset-password'),
     path('staff/token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     path('staff/me/fcm-token/', UpdateFCMTokenView.as_view(), name='update-fcm-token'),
+    path('vapid-public-key/', VapidPublicKeyView.as_view(), name='vapid-public-key'),
 ]

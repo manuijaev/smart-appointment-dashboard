@@ -12,6 +12,31 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 let messagingInstance = null;
+let cachedVapidKey = null;
+
+// Fetch VAPID public key from backend
+async function getVapidKey() {
+  if (cachedVapidKey) return cachedVapidKey;
+  
+  // First try to get from backend
+  try {
+    const baseUrl = import.meta.env.VITE_API_URL || '';
+    const response = await fetch(`${baseUrl}/api/v1/vapid-public-key/`);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.vapid_public_key) {
+        cachedVapidKey = data.vapid_public_key;
+        return cachedVapidKey;
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to fetch VAPID key from backend:', e);
+  }
+  
+  // Fallback to environment variable
+  cachedVapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+  return cachedVapidKey;
+}
 
 async function getMessagingInstance() {
   const supported = await isSupported();
@@ -29,9 +54,9 @@ export async function requestFcmToken() {
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') return null;
 
-  const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+  const vapidKey = await getVapidKey();
   if (!vapidKey) {
-    throw new Error('Missing VITE_FIREBASE_VAPID_KEY');
+    throw new Error('Missing VAPID key');
   }
 
   let registration = await navigator.serviceWorker.getRegistration();
