@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { sendAppointmentRequestEmail } from '../services/emailjs';
 
 const ICONS = {
   calendar: (
@@ -339,6 +340,30 @@ export default function HomePage() {
       };
       
       const { data } = await api.post('/appointments/create/', payload);
+      
+      // Send email notification to staff member via EmailJS
+      const selectedStaff = allStaff.find(s => String(s.id) === String(formData.staff_member));
+      if (selectedStaff?.email) {
+        const deptName = selectedStaff.department?.name || getDeptNameFromId(selectedStaff.department) || '';
+        const divName = selectedStaff.division?.name || selectedStaff.division_name || '';
+        
+        try {
+          await sendAppointmentRequestEmail({
+            to_email: selectedStaff.email,
+            to_name: selectedStaff.full_name || selectedStaff.first_name || '',
+            visitor_name: formData.visitor_name,
+            visitor_email: formData.visitor_email,
+            department_name: deptName,
+            division_name: divName,
+            appointment_date: formData.appointment_date,
+            message: formData.message || '',
+            staff_name: selectedStaff.full_name || selectedStaff.first_name || '',
+          });
+        } catch (emailError) {
+          console.error('Failed to send email notification:', emailError);
+        }
+      }
+      
       setReferenceNumber(data.reference_number || `GPX-${Date.now()}`);
       setShowSuccess(true);
       showToastMessage('Appointment submitted successfully!');

@@ -110,13 +110,49 @@ class AppointmentCreateView(generics.CreateAPIView):
             'message': 'Appointment request created',
             'data': response.data,
             'push': getattr(self, '_push_result', {'sent': False, 'reason': 'unknown'}),
+            'email': getattr(self, '_email_result', {'sent': False, 'reason': 'unknown'}),
         }
         return response
 
     def perform_create(self, serializer):
         appointment = serializer.save()
-        self._push_result = {'sent': False, 'reason': 'deferred_to_async_worker'}
-        threading.Thread(target=_notify_new_appointment, args=(appointment,), daemon=True).start()
+        # Send email and push synchronously to ensure delivery
+        self._email_result = {'sent': False, 'reason': 'unknown'}
+        self._push_result = {'sent': False, 'reason': 'unknown'}
+        
+        # Send email immediately (synchronously)
+        try:
+            staff_email = appointment.staff_member.email
+            local_appt_time = timezone.localtime(appointment.appointment_date).strftime('%B %d, %Y at %I:%M %p')
+            self._email_result = send_appointment_email(
+                staff_email=staff_email,
+                visitor_name=appointment.visitor_name,
+                appointment_date=local_appt_time,
+                message=appointment.message,
+            )
+        except Exception as e:
+            logger.exception('Failed to send appointment email: %s', str(e))
+            self._email_result = {'sent': False, 'reason': str(e)[:100]}
+        
+        # Send push notification
+        try:
+            token_set = set(
+                UserDeviceToken.objects.filter(user=appointment.staff_member, is_active=True).values_list('token', flat=True)
+            )
+            if appointment.staff_member.fcm_token:
+                token_set.add(appointment.staff_member.fcm_token)
+
+            if token_set:
+                local_appt_time = timezone.localtime(appointment.appointment_date).strftime('%b %d, %Y at %I:%M %p')
+                push_result = send_fcm_push_notification(
+                    fcm_token=list(token_set)[0],  # Send to first token
+                    title='New Appointment Request',
+                    body=f'You have a new appointment from {appointment.visitor_name} for {local_appt_time}',
+                )
+                self._push_result = push_result
+        except Exception as e:
+            logger.exception('Failed to send push notification: %s', str(e))
+            self._push_result = {'sent': False, 'reason': str(e)[:100]}
 
 
 class MyAppointmentsView(generics.ListAPIView):
