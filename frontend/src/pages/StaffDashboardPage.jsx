@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useAppointments } from '../context/AppointmentContext';
+import { useNotification } from '../context/NotificationContext';
 import ConfirmModal from '../components/ConfirmModal';
 import { sendVisitorResponseEmail } from '../services/emailjs';
 
@@ -159,6 +160,7 @@ export default function StaffDashboardPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { appointments, loadMyAppointments, updateAppointment, deleteAppointment, deleteAppointmentsBulk } = useAppointments();
+  const { subscribeToForegroundMessages } = useNotification();
   
   const [activeTab, setActiveTab] = useState('dashboard');
   const [viewMode, setViewMode] = useState('grid');
@@ -199,6 +201,48 @@ export default function StaffDashboardPage() {
       console.error('Failed to save notifications:', e);
     }
   }, [notifications]);
+
+  // Subscribe to foreground push notifications
+  useEffect(() => {
+    let unsubscribe = null;
+    
+    const setupSubscription = async () => {
+      unsubscribe = await subscribeToForegroundMessages((payload) => {
+        // Handle incoming push notification
+        const { notification, data } = payload;
+        const title = notification?.title || 'New Appointment';
+        const body = notification?.body || 'You have a new appointment request';
+        
+        // Create notification object
+        const newNotification = {
+          id: Date.now(),
+          message: body,
+          type: 'appointment',
+          read: false,
+          timestamp: new Date().toISOString(),
+          data: data
+        };
+        
+        // Add to notifications list
+        setNotifications(prev => [newNotification, ...prev].slice(0, 50));
+        
+        // Show toast notification
+        setToast(body);
+        setTimeout(() => setToast(''), 5000);
+      });
+    };
+    
+    if (subscribeToForegroundMessages) {
+      setupSubscription();
+    }
+    
+    return () => {
+      if (unsubscribe && typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, [subscribeToForegroundMessages]);
+  
   const longPressTimerRef = useRef(null);
   const notificationRef = useRef(null);
 

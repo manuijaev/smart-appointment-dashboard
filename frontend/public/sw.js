@@ -39,19 +39,48 @@ self.addEventListener('push', (event) => {
       raw = {};
     }
   }
-  const notification = raw.notification || raw.webpush?.notification || raw.data || raw || {};
-  const clickPath = raw.data?.click_action || raw.click_action || raw.data?.url || raw.url || '/staff/dashboard';
 
-  const title = notification.title || 'New Appointment Request';
-  const body = notification.body || 'You have a new appointment update.';
-  const icon = notification.icon || '/favicon.ico';
+  // Extract notification data from various possible formats
+  let title = 'New Appointment';
+  let body = 'You have a new notification';
+  let icon = '/icons/icon-192.png';
+  let clickPath = '/staff/dashboard';
+  
+  // Handle different payload formats
+  if (raw.notification) {
+    title = raw.notification.title || title;
+    body = raw.notification.body || body;
+    icon = raw.notification.icon || icon;
+    if (raw.notification.click_action) clickPath = raw.notification.click_action;
+  } else if (raw.data) {
+    title = raw.data.title || raw.title || title;
+    body = raw.data.body || raw.body || body;
+    if (raw.data.url) clickPath = raw.data.url;
+    if (raw.data.click_action) clickPath = raw.data.click_action;
+  } else {
+    title = raw.title || title;
+    body = raw.body || body;
+    if (raw.url) clickPath = raw.url;
+    if (raw.click_action) clickPath = raw.click_action;
+  }
+
+  const options = {
+    body: body,
+    icon: icon,
+    badge: '/icons/icon-192.png',
+    vibrate: [200, 100, 200],
+    tag: 'appointment-notification',
+    renotify: true,
+    requireInteraction: true,
+    data: { clickPath },
+    actions: [
+      { action: 'view', title: 'View' },
+      { action: 'dismiss', title: 'Dismiss' }
+    ]
+  };
 
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body,
-      icon,
-      data: { clickPath },
-    })
+    self.registration.showNotification(title, options)
   );
 });
 
