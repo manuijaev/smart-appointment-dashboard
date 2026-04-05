@@ -227,12 +227,10 @@ class AppointmentUpdateView(generics.UpdateAPIView):
 
     def perform_update(self, serializer):
         appointment = serializer.save()
-        threading.Thread(
-            target=_notify_appointment_response,
-            args=(appointment, getattr(self.request.user, 'full_name', None)),
-            daemon=True,
-        ).start()
-
+        _notify_appointment_response(
+            appointment,
+            getattr(self.request.user, 'full_name', None)
+        )
     def update(self, request, *args, **kwargs):
         response = super().update(request, *args, **kwargs)
         return Response({'message': 'Appointment updated', 'data': response.data})
