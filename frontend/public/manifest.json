@@ -1,6 +1,6 @@
 {
-  "name": "Smart Appointment Booking System",
-  "short_name": "Appointments",
+  "name": "Visitor Management System",
+  "short_name": "Visitor Desk",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

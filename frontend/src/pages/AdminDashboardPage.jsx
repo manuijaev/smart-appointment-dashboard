@@ -9,8 +9,8 @@ const MOCK_NOTIFICATIONS = [
   {
     id: 1,
     category: 'escalation',
-    title: '5 Appointments Exceeding 24h Pending Threshold',
-    message: 'The following staff have unresponded appointments older than 24 hours: Alice Mwangi (2), Brian Otieno (2), Carol Njeri (1). Consider reassigning or sending a manual reminder.',
+    title: '5 visit requests exceeding 24h pending',
+    message: 'The following staff have unresponded visit requests older than 24 hours: Alice Mwangi (2), Brian Otieno (2), Carol Njeri (1). Consider reassigning or sending a manual reminder.',
     time: '2 minutes ago',
     unread: true,
     urgent: true,
@@ -31,8 +31,8 @@ const MOCK_NOTIFICATIONS = [
   {
     id: 3,
     category: 'appointments',
-    title: 'Appointment Volume Spike - Engineering Dept',
-    message: 'Engineering received 14 new appointment requests in the last 2 hours - 3x above the daily average. Staff in this department may need support or temporary reallocation.',
+    title: 'Visit request volume spike - Engineering Dept',
+    message: 'Engineering received 14 new visit requests in the last 2 hours - 3x above the daily average. Staff in this department may need support or temporary reallocation.',
     time: '1 hour ago',
     unread: true,
     urgent: false,
@@ -54,7 +54,7 @@ const MOCK_NOTIFICATIONS = [
     id: 5,
     category: 'report',
     title: 'Daily Morning Digest - March 10',
-    message: 'Yesterday: 46 appointments processed - 38 accepted - 4 declined - 4 rescheduled. Fastest responder: Brian Otieno (avg 18 min). Slowest: Carol Njeri (avg 4.2 hrs). 2 FCM push notifications failed to deliver.',
+    message: 'Yesterday: 46 visit requests processed - 38 accepted - 4 declined - 4 rescheduled. Fastest responder: Brian Otieno (avg 18 min). Slowest: Carol Njeri (avg 4.2 hrs). 2 FCM push notifications failed to deliver.',
     time: '7:00 AM today',
     unread: false,
     urgent: false,
@@ -65,7 +65,7 @@ const MOCK_NOTIFICATIONS = [
     id: 6,
     category: 'staff',
     title: 'Staff Account Deactivated',
-    message: 'You deactivated Carol Njeri\'s account (HR - Recruitment). Her 3 pending appointments were left unassigned. Consider reassigning them to another HR staff member.',
+    message: 'You deactivated Carol Njeri\'s account (HR - Recruitment). Her 3 pending visit requests were left unassigned. Consider reassigning them to another HR staff member.',
     time: 'Yesterday, 4:22 PM',
     unread: false,
     urgent: false,
@@ -76,7 +76,7 @@ const MOCK_NOTIFICATIONS = [
     id: 7,
     category: 'report',
     title: 'Weekly Performance Report - Week 10',
-    message: '284 appointments processed last week. Overall acceptance rate: 87%. Average response time improved by 18 minutes vs the previous week. Engineering remained the busiest department for the 3rd consecutive week.',
+    message: '284 visit requests processed last week. Overall acceptance rate: 87%. Average response time improved by 18 minutes vs the previous week. Engineering remained the busiest department for the 3rd consecutive week.',
     time: 'Monday, 7:00 AM',
     unread: false,
     urgent: false,
@@ -162,11 +162,11 @@ export default function AdminDashboardPage() {
 
   const exportAppointmentsReport = () => {
     if (allAppointments.length === 0) {
-      showToast('No appointments to export.', 'error');
+      showToast('No visit requests to export.', 'error');
       return;
     }
     const rows = [
-      ['ID', 'Visitor Name', 'Visitor Email', 'Staff Name', 'Department', 'Status', 'Appointment Date'],
+      ['ID', 'Visitor Name', 'Visitor Email', 'Staff Name', 'Department', 'Status', 'Visit Date'],
       ...allAppointments.map((a) => [
         a.id,
         a.visitor_name,
@@ -185,7 +185,7 @@ export default function AdminDashboardPage() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.href = url;
-    link.download = `appointments_report_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `visit_requests_report_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -428,7 +428,7 @@ export default function AdminDashboardPage() {
       await api.patch(`/appointments/reassign/${reassignModal.id}/`, {
         staff_member: parseInt(reassignStaff),
       });
-      showToast(`Appointment reassigned to ${staff.find(s => s.id === parseInt(reassignStaff))?.full_name}`);
+      showToast(`Visit request reassigned to ${staff.find(s => s.id === parseInt(reassignStaff))?.full_name}`);
       setReassignModal(null);
       await loadData();
     } catch (err) {
@@ -439,7 +439,7 @@ export default function AdminDashboardPage() {
   const handleDeleteAppointment = async (id) => {
     try {
       await api.delete(`/appointments/delete/${id}/`);
-      showToast('Appointment deleted.');
+      showToast('Visit request deleted.');
       await loadData();
     } catch (err) {
       showToast(err.response?.data?.detail || 'Failed to delete.', 'error');
@@ -645,7 +645,7 @@ export default function AdminDashboardPage() {
             <rect x="3" y="14" width="7" height="7"></rect>
           </svg>
         </div>
-        <div className={`rail-icon ${activeNav === 'appointments' ? 'active' : ''}`} onClick={() => setActiveNav('appointments')} title="Appointments">
+        <div className={`rail-icon ${activeNav === 'appointments' ? 'active' : ''}`} onClick={() => setActiveNav('appointments')} title="Visitor log">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
             <polyline points="14 2 14 8 20 8"></polyline>
@@ -729,7 +729,7 @@ export default function AdminDashboardPage() {
               <polyline points="14 2 14 8 20 8"></polyline>
             </svg>
           </span>
-          All Appointments
+          Visitor log
           <span className="nav-badge red">{analytics.pending}</span>
         </div>
         <div className={`nav-item ${activeNav === 'staff' ? 'active' : ''}`} onClick={() => setActiveNav('staff')}>
@@ -802,7 +802,7 @@ export default function AdminDashboardPage() {
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
               </svg>
             </span>
-            <span className="alert-text"><strong>{analytics.pending} appointments</strong> have been pending for more than 24 hours - consider reassigning or escalating.</span>
+            <span className="alert-text"><strong>{analytics.pending} visit requests</strong> have been pending for more than 24 hours - consider reassigning or escalating.</span>
             <span style={{ fontSize: '10px', color: 'var(--amber)', cursor: 'pointer', letterSpacing: '.06em' }} onClick={() => setActiveNav('appointments')}>VIEW ALL</span>
             <span className="alert-dismiss" onClick={() => setAlertDismissed(true)}>x</span>
           </div>
@@ -836,7 +836,7 @@ export default function AdminDashboardPage() {
         {/* KPI Strip */}
         <div className="kpi-strip">
           <div className="kpi-card" style={{ '--kpi-color': 'var(--amber)', '--kpi-fill': '0.72' }}>
-            <div className="kpi-label">Total Appointments</div>
+            <div className="kpi-label">Total visit requests</div>
             <div className="kpi-value">{analytics.totalAppointments}</div>
             <div className="kpi-sub"><span className="kpi-trend-up">+ 12%</span> vs last month</div>
           </div>
@@ -865,7 +865,7 @@ export default function AdminDashboardPage() {
               <div className="panel-head">
                 <div className="panel-title">
                   <div className="panel-title-dot"></div>
-                  Recent Appointments
+                  Recent visit requests
                 </div>
                 <span className="panel-action" onClick={() => setActiveNav('appointments')}>View All</span>
               </div>
@@ -1022,13 +1022,13 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        {/* Appointments Management */}
+        {/* Visitor log */}
         {activeNav === 'appointments' && (
           <div className="panel full">
             <div className="panel-head">
               <div className="panel-title">
                 <div className="panel-title-dot"></div>
-                All Appointments
+                Visitor log
               </div>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                 <input
@@ -1072,8 +1072,8 @@ export default function AdminDashboardPage() {
                         <div className="row-actions">
                           <button className="act-btn" onClick={() => { setReassignModal(a); setReassignStaff(String(a.staff_member)); }}>Reassign</button>
                           <button className="act-btn danger" onClick={() => openConfirm({
-                            title: 'Delete Appointment?',
-                            message: 'Delete appointment from ' + a.visitor_name + '?',
+                            title: 'Delete visit request?',
+                            message: 'Delete visit request from ' + a.visitor_name + '?',
                             confirmText: 'Delete',
                             tone: 'danger',
                             action: () => handleDeleteAppointment(a.id)
@@ -1349,7 +1349,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className={`filter-chip ${notifTypeFilter === 'appointments' ? 'active' : ''}`} onClick={() => setNotifTypeFilter('appointments')}>
                 <div className="filter-dot" style={{ background: 'var(--amber)' }}></div>
-                Appointments
+                Visit requests
               </div>
               <div className={`filter-chip ${notifTypeFilter === 'security' ? 'active' : ''}`} onClick={() => setNotifTypeFilter('security')}>
                 <div className="filter-dot" style={{ background: 'var(--purple)' }}></div>
@@ -1683,12 +1683,12 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Reassign Modal */}
+      {/* Reassign Visit */}
       {reassignModal && (
         <div className="modal-overlay" onClick={() => setReassignModal(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <h3>Reassign Appointment</h3>
-            <p className="modal-subtitle">Transfer this appointment from {reassignModal.staff_name} to another staff member.</p>
+            <h3>Reassign visit request</h3>
+            <p className="modal-subtitle">Transfer this visit request from {reassignModal.staff_name} to another staff member.</p>
             <div className="field" style={{ marginBottom: '16px' }}>
               <label className="field-label">Select New Staff Member *</label>
               <select className="field-input" value={reassignStaff} onChange={(e) => setReassignStaff(e.target.value)}>

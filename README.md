@@ -1,819 +1,297 @@
-# Smart Appointment Booking System (PWA)
+# Smart Appointment Booking System (PWA Website)
 
-A full-stack appointment booking system with a Django REST Framework backend and React PWA frontend. The system enables visitors to book appointments with staff members through a guided multi-step process, while staff and administrators can manage appointments and organizational structure through dedicated dashboards.
+A modern Progressive Web App that guides visitors through a multi-step appointment booking journey while giving staff and administrators highly interactive dashboards to manage requests, resources, and notifications in real time. The frontend is built with React + Vite, the backend runs on Django + Django REST Framework, and the two communicate over JWT-protected REST APIs with push/email notification support.
 
 ## Table of Contents
 
-- [Project Overview](#project-overview)
-- [Technology Stack](#technology-stack)
-- [Architecture](#architecture)
-- [Data Models](#data-models)
-- [Dashboard Overview](#dashboard-overview)
-  - [Visitor Home Page](#visitor-home-page)
-  - [Staff Dashboard](#staff-dashboard)
-  - [Admin Dashboard](#admin-dashboard)
-- [API Endpoints](#api-endpoints)
-- [Authentication & Authorization](#authentication--authorization)
-- [Notifications](#notifications)
-- [Project Structure](#project-structure)
-- [Backend Setup](#backend-setup)
-- [Frontend Setup](#frontend-setup)
-- [Environment Variables](#environment-variables)
-- [Production Considerations](#production-considerations)
+1. [High-Level Experience](#high-level-experience)
+2. [System Architecture & Data Flow](#system-architecture--data-flow)
+3. [Core Feature Breakdown](#core-feature-breakdown)
+   - [Visitor Flow](#visitor-flow)
+   - [Staff Workspace](#staff-workspace)
+   - [Admin Control Center](#admin-control-center)
+4. [Technology Stack](#technology-stack)
+5. [Data Models & API Contracts](#data-models--api-contracts)
+6. [Notifications & Communication](#notifications--communication)
+7. [Security & Authorization](#security--authorization)
+8. [Developer Setup](#developer-setup)
+   - [Backend](#backend)
+   - [Frontend](#frontend)
+9. [Testing & Quality](#testing--quality)
+10. [Operational Considerations](#operational-considerations)
+11. [Troubleshooting & FAQs](#troubleshooting--faqs)
+12. [Contribution Guidelines](#contribution-guidelines)
 
 ---
 
-## Project Overview
+## High-Level Experience
 
-The Smart Appointment Booking System is designed to streamline the appointment scheduling process between visitors and staff members within an organization. It provides a clean, guided interface for visitors to submit appointment requests and robust management tools for staff and administrators.
+Visitors land on a friendly home page that explains the appointment flow, highlights the value propositions (fast routing, response transparency, and push/email notifications), and immediately lets them start a 7-step booking assistant. Staff members receive real-time appointment alerts, manage requests through status tabs, and stay aware of their availability and session state. Administrators orchestrate the entire hierarchy—departments, divisions, staff accounts, and appointment assignments—via one consolidated dashboard with analytics and notifications.
 
-### Key Features
+The application feels like a native app thanks to:
 
-- **Multi-step Booking Flow**: Visitors go through a guided 7-step process to book appointments
-- **Department & Division Routing**: Appointments are routed to the correct team based on department and division selection
-- **Real-time Status Updates**: Staff can Accept, Reschedule, or Decline appointments with response notes
-- **Email Notifications**: Automated email notifications via EmailJS for appointment requests and responses
-- **Push Notifications**: Firebase Cloud Messaging support for real-time push notifications
-- **Role-based Access Control**: Separate dashboards for Visitors, Staff, and Administrators
-- **PWA Support**: Progressive Web App capabilities with offline caching
+- **PWA capabilities**: service worker caching, offline-friendly shell, install prompt, and manifest definitions
+- **Role-aware routing**: Protected routes redirect unauthorized visitors, staff, or admin users to login flows
+- **Responsive UI**: Layouts adapt to phones, tablets, and desktops automatically
+- **Live communications**: Firebase Cloud Messaging + EmailJS keep everyone in-sync without refreshes
+
+---
+
+## System Architecture & Data Flow
+
+```
+Visitor Browser ↔ Frontend React PWA ↔ (Axios) ↔ Django REST API ↔ PostgreSQL
+                                   |                              |
+                                 EmailJS                        Firebase FCM
+                                   |                              |
+                        Staff / Admin Email Alert             Staff Push Alert
+```
+
+1. Visitor submits booking request → frontend validates each step → sends request to `/api/appointments/create/`
+2. Backend stores appointment, ties it to department/division/staff, and returns confirmation
+3. Staff receives email + push notification + dashboard badge
+4. Staff responds via dashboard (accept/reschedule/decline) and optionally adds response note
+5. Response triggers notification back to visitor and updates appointment status
+6. Admin can reassign appointments, manage staff, and monitor analytics from `/admin/dashboard`
+
+Data flows prioritize eventual consistency: dashboards poll every 8–10 seconds but rely on push notifications for instant updates.
+
+---
+
+## Core Feature Breakdown
+
+### Visitor Flow
+
+Visitors traverse a guided 7-step form that enforces validation before moving to each subsequent question.
+
+| Step | Input | Purpose | Validation |
+|------|-------|---------|------------|
+| 1 | Full Name | Identify visitor | Required, text only, max length 120
+| 2 | Email Address | Contact channel | Required, must be valid email
+| 3 | Department | Routing category | Required, options pulled from `/api/departments/`
+| 4 | Division | Narrow team | Required after department selection, filtered via `/api/divisions/?department_id=`
+| 5 | Staff Member | Assignee | Required, filters by department/division
+| 6 | Appointment Date & Time | Scheduling | Required, future date/time; rejects past dates
+| 7 | Note | Optional context | Text area (max 600 chars) for visitor message
+
+- Each step shows progress with a header/badge and prevents rollback without explicit “Back” clicks
+- On submit, an animation confirms delivery and invites another request
+- Visitors see automated emails that summarize their request and eventual staff response (accept/reschedule/decline)
+
+### Staff Workspace
+
+Accessible at `/staff/login` and `/staff/dashboard`, staff see:
+
+- **Profile + availability**: Displays name, avatar initials, department/division, and a toggle for “Available / Busy” status
+- **Stats overview**: Pending appointment count, total responses this week, acceptance ratio, and current session time remaining
+- **Tabbed list**: Pending, Accepted, Declined, All (with color-coded badges and overdue chips for pending requests older than 24 hours)
+- **Search bar**: Type-ahead filtering on visitor name, email, or service
+- **Response cards**: Each appointment card shows visitor details, requested date/time, message, and actions
+- **Actions for pending appointments**
+  - Accept → status updates immediately
+  - Reschedule → opens date/time picker and response note field
+  - Decline → sends polite decline with optional explanation
+- **Toast + audio cues** triggered on new appointments or action outcomes
+- **Session & security controls**: Automatic 30-minute timeout, 2-minute warning modal, extend button, and forced logout after inactivity
+- **Export to CSV**: Current filter state (tab + search) is respected so staff can export the same subset they see
+
+### Admin Control Center
+
+The admin dashboard (`/admin/login`, `/admin/dashboard`) is where organizational controls live.
+
+#### Department & Division Management
+
+- Create, rename, and delete departments with inline edit modals
+- Divisions are tied to departments during creation; editing allows reassignments
+- Delete operations prompt a danger modal requiring keyword confirmation
+
+#### Staff Management
+
+- Admins create staff (admin or staff role) via a dedicated form that sets department/division, role, and temporary password
+- The staff table displays role, status, assigned team, and activation toggle (soft deactivates without deleting data)
+- Inline edits let admins change departments, divisions, or toggle `is_active`
+- Delete permanently removes accounts with confirmation
+
+#### Appointment Administration
+
+- Global appointment view with filters by status
+- Reassignment modal to move any request to another staff member (filters to active users within the selected department/division)
+- Action log to audit who reassigned or edited appointments (future scope)
+
+#### Analytics & Notifications
+
+- Metric cards: total appointments, pending, accepted, declined, monthly bookings, active staff count
+- Notification bell with unread counts, dropdown preview, and “mark all as read” action
+- Full notifications page with filters (All, Unread, Appointment, Staff) and timestamps
+
+#### Security
+
+- All routes guarded by role checks; admins cannot be impersonated by staff
+- Deactivated staff cannot log in even with valid tokens
+- Confirmations protect destructive actions (delete, deactivate, reassign)
 
 ---
 
 ## Technology Stack
 
+| Area | Technology | Notes |
+|------|------------|-------|
+| Backend Framework | Django 4.x (Python) | Django REST Framework, Celery-ready settings, custom user model
+| API Layer | Django REST Framework | ViewSets + serializers, JWT auth via `djangorestframework-simplejwt`
+| Database | PostgreSQL | Configurable via env vars, migrations managed through Django
+| Frontend | React 18, Vite | Vite dev server, React Router v6, Context API for state
+| API Client | Axios | Central `services/` folder with interceptors and JWT refresh
+| Auth | JWT + Refresh | Access tokens in `localStorage`, refresh handled transparently
+| Notifications | EmailJS, Firebase Cloud Messaging | Email templates stored in `frontend/services/emailjs`, FCM tokens stored per-user
+| PWA | Service worker + manifest | Custom caching strategies inside `public/sw.js` and `manifest.json`
+| Styling | CSS Modules / global styles | Modular components with BEM-alike naming conventions
+
+---
+
+## Data Models & API Contracts
+
+### Data Models (simplified)
+
+- **Department**: `name` (unique)
+- **Division**: `name`, `department` (FK), `is_active`
+- **User**: Custom user with `full_name`, `email`, `department`, `division`, `role` (Staff/Admin), `fcm_token`, `is_active` flag
+- **Appointment**: visitor fields, `department`, `division`, `staff_member`, `appointment_date`, `message`, `status` enum (`Pending`, `Accepted`, `Rescheduled`, `Declined`), `response_note`, `created_at`
+
+### API Contract Highlights
+
+Authentication endpoints use JWT (`/api/staff/login/`, `/api/staff/token/refresh/`, `/api/staff/me/`). Staff CRUD, department/division CRUD, and appointments endpoints are namespaced under `/api/`.
+
+Refer to the old README tables for full endpoint docs (this repo keeps consistent naming conventions across HTTP verbs). Ensure POST/PUT/PATCH payloads follow serializer validation: `appointment_date` must be ISO 8601, department/division IDs must exist, and `staff_member` must belong to the selected division.
+
+---
+
+## Notifications & Communication
+
+- **Email**: EmailJS templates for request and response flows. Backend orchestrates webhook calls.
+- **Push**: Clients register FCM tokens via `/api/staff/me/fcm-token/`. Firebase service accounts can send high-priority messages to staff devices.
+- **In-app**: Toast messages and notification badges are triggered by both polling and Web Push.
+
+Service worker intercepts push payloads and shows notifications even when the app is closed.
+
+---
+
+## Security & Authorization
+
+- **JWT authentication**: Short-lived access tokens plus refresh tokens to minimize risk
+- **Role guards**: `<ProtectedRoute>` component ensures `/staff` paths require `Staff` or `Admin`, `/admin` paths strictly require `Admin`
+- **CORS**: Configure `backend/config/settings.py` to sync `DJANGO_ALLOWED_HOSTS` with deployed `frontend` origins
+- **Session timeout**: Staff sessions auto-logout after 30 minutes of inactivity
+- **Action confirmations**: All delete/activation flows go through danger modals with explicit confirmation text
+
+---
+
+## Developer Setup
+
 ### Backend
-
-| Technology | Purpose |
-|------------|---------|
-| Django 4.x | Web framework |
-| Django REST Framework | RESTful API |
-| PostgreSQL | Primary database |
-| JWT (djangorestframework-simplejwt) | Authentication |
-| EmailJS | Transactional emails |
-| Firebase Cloud Messaging | Push notifications |
-
-### Frontend
-
-| Technology | Purpose |
-|------------|---------|
-| React 18 | UI framework |
-| Vite | Build tool |
-| React Router | Navigation |
-| Axios | HTTP client |
-| Context API | State management |
-| Service Worker | PWA offline support |
-
----
-
-## Architecture
-
-```
-                    +------------------+
-                    |   Visitor User   |
-                    |   (Home Page)    |
-                    +--------+---------+
-                             |
-                             v
-                    +------------------+
-                    |   Appointment    |
-                    |   Request        |
-                    +--------+---------+
-                             |
-                             v
-         +-------------------+-------------------+
-         |                                       |
-         v                                       v
-+------------------+                   +------------------+
-|   Staff Member   |                   |    Admin User    |
-|   (Dashboard)    |                   |   (Dashboard)   |
-+------------------+                   +------------------+
-```
-
----
-
-## Data Models
-
-### Department
-
-Represents a department within the organization.
-
-```python
-class Department(models.Model):
-    name = models.CharField(max_length=120, unique=True)
-```
-
-### Division
-
-Represents a subdivision within a department.
-
-```python
-class Division(models.Model):
-    name = models.CharField(max_length=120)
-    department = models.ForeignKey(Department, on_delete=models.CASCADE)
-```
-
-### User
-
-Custom user model supporting two roles: Admin and Staff.
-
-```python
-class User(AbstractBaseUser):
-    full_name = models.CharField(max_length=255)
-    email = models.EmailField(unique=True)
-    department = models.ForeignKey(Department, null=True, blank=True)
-    division = models.ForeignKey(Division, null=True, blank=True)
-    role = models.CharField(choices=['Admin', 'Staff'])
-    fcm_token = models.TextField()  # Firebase token for push notifications
-    is_active = models.BooleanField(default=True)
-```
-
-### Appointment
-
-Represents an appointment request from a visitor.
-
-```python
-class Appointment(models.Model):
-    class Status(models.TextChoices):
-        PENDING = 'Pending'
-        ACCEPTED = 'Accepted'
-        RESCHEDULED = 'Rescheduled'
-        DECLINED = 'Declined'
-    
-    visitor_name = models.CharField(max_length=120)
-    visitor_email = models.EmailField()
-    department = models.ForeignKey(Department)
-    division = models.ForeignKey(Division, null=True)
-    staff_member = models.ForeignKey(User)
-    appointment_date = models.DateTimeField()
-    message = models.TextField()  # Visitor's message
-    status = models.CharField(choices=Status, default=Status.PENDING)
-    response_note = models.TextField()  # Staff's response note
-    created_at = models.DateTimeField(auto_now_add=True)
-```
-
----
-
-## Dashboard Overview
-
-### Visitor Home Page
-
-The visitor-facing booking interface accessible at the root URL (`/`). This is the entry point for visitors who want to book appointments.
-
-#### Features
-
-**1. Landing Section**
-- Welcome message explaining the appointment booking process
-- Feature highlights: Instant Request Delivery, Email Response Updates, Department + Division Routing
-- Step-by-step explanation of how the booking process works
-
-**2. Guided Booking Flow (7 Steps)**
-
-| Step | Question | Field Type | Description |
-|------|----------|------------|-------------|
-| 1 | "What's your name?" | Text Input | Visitor's full name |
-| 2 | "What's your email address?" | Email Input | Visitor's contact email |
-| 3 | "Which department do you want to visit?" | Dropdown | Select from available departments |
-| 4 | "Choose a division in that department." | Dropdown | Filtered by selected department |
-| 5 | "Select the staff member you want to meet." | Dropdown | Filtered by department and division |
-| 6 | "When should the appointment happen?" | DateTime Picker | Future date/time selection |
-| 7 | "Any note for the staff member?" | Textarea | Optional message |
-
-**3. Form Validation**
-- Real-time validation at each step
-- Prevents proceeding without valid input
-- Validates that appointment date is in the future
-
-**4. Submission**
-- Sends appointment request to the backend
-- Triggers email notification to selected staff member
-- Displays success confirmation with option to submit another request
-
-#### User Flow
-
-```
-Landing Page → Start Booking → Step 1 (Name) → Step 2 (Email) 
-→ Step 3 (Department) → Step 4 (Division) → Step 5 (Staff) 
-→ Step 6 (Date/Time) → Step 7 (Message) → Submit → Success
-```
-
----
-
-### Staff Dashboard
-
-Accessible at `/staff/dashboard` for authenticated users with the Staff or Admin role.
-
-#### Features
-
-**1. Dashboard Overview**
-- Staff profile card showing name, department, division
-- Stats dashboard: Pending count, Total appointments, Accept rate
-- Today's date and greeting
-
-**2. Appointment List View**
-- Displays all appointments assigned to the logged-in staff member
-- Auto-refreshes every 8 seconds to show new appointments
-- Tabbed interface: Pending, Accepted, Declined, All
-- Shows appointment status with color-coded badges:
-  - **Pending** (yellow) - Awaiting response
-  - **Accepted** (green) - Confirmed
-  - **Rescheduled** (blue) - Date changed
-  - **Declined** (red) - Rejected
-
-**3. Search & Filter**
-- Search bar to find appointments by:
-  - Visitor name
-  - Visitor email
-  - Service name
-- Real-time filtering as you type
-- Combined with status tab filters
-
-**4. Appointment Card Information**
-- Visitor's name and initials (avatar)
-- Visitor's email
-- Requested appointment date/time
-- Visitor's message
-- Status badge
-- Overdue indicator for pending appointments >24h
-
-**5. Response Actions (for Pending Appointments)**
-- **Accept**: Approves the appointment request
-- **Reschedule**: Opens response area for date changes
-- **Decline**: Rejects the appointment request
-- Response note textarea for adding context to the response
-- Email notification sent to visitor on action
-
-**6. Staff Availability Status**
-- Toggle between Available / Busy status
-- Visible in topbar for quick reference
-- API integration to update status in real-time
-- Helps visitors know staff availability
-
-**7. Session Management**
-- 30-minute session timeout
-- 2-minute warning modal before expiration
-- "Extend Session" button to continue working
-- "Log Out" button to end session
-- Activity tracking (mouse, keyboard, scroll, touch)
-- Automatic logout when session expires
-
-**8. Export to CSV**
-- Export appointments to CSV file
-- Includes: ID, Visitor Name, Email, Service, Date, Time, Status, Notes
-- Filters apply to export (current tab + search)
-- Auto-named with current date
-
-**9. Real-time Updates**
-- Firebase push notification support
-- Toast notifications for new updates
-- Automatic refresh on notification receipt
-- Unread notification indicator in sidebar
-
-**10. Response Loop Feature**
-- Toggle to enable visual response loop
-- Cycles between visual state and response details
-- Provides visual feedback on submitted responses
-
-#### User Flow
-
-```
-Login → Dashboard → View Appointments → Select Action 
-→ Add Response Note → Confirm → Email Sent to Visitor → Status Updated
-```
-
-#### Session Timeout Flow
-
-```
-Active Use → 30 min inactivity → Warning Modal (2 min left) 
-→ Extend Session OR Log Out → Continue OR Session Ends
-```
-
----
-
-### Admin Dashboard
-
-Accessible at `/admin/dashboard` for authenticated users with the Admin role. This is the most comprehensive dashboard for managing the entire appointment system.
-
-#### Features
-
-**1. Department Management**
-
-| Action | Description |
-|--------|-------------|
-| Create | Add new departments with a name |
-| Read | View list of all departments |
-| Update | Edit department name inline |
-| Delete | Remove departments with confirmation |
-
-- Department creation form at the top of the dashboard
-- Inline editing by clicking Edit button
-- Delete confirmation modal to prevent accidental deletion
-
-**2. Division Management**
-
-| Action | Description |
-|--------|-------------|
-| Create | Add divisions linked to departments |
-| Read | View all divisions with their parent department |
-| Update | Edit division name and parent department |
-| Delete | Remove divisions with confirmation |
-
-- Division creation form requiring:
-  - Division name
-  - Parent department selection
-- Displays division name and associated department
-- Inline editing with department reassignment
-
-**3. Staff Management**
-
-The staff management section provides comprehensive user account controls:
-
-| Action | Description |
-|--------|-------------|
-| Create | Register new staff via signup page |
-| Read | View all staff members with details |
-| Update | Edit staff profile, role, department, division |
-| Activate/Deactivate | Toggle account active status |
-| Delete | Permanently remove staff account |
-
-**Staff List Display:**
-- Staff member's full name and email
-- Assigned department and division
-- Account status (Active/Inactive)
-- Role (Staff or Admin)
-
-**Staff Editing Capabilities:**
-- Change full name
-- Change role (Staff/Admin)
-- Assign/change department
-- Assign/change division
-- Toggle active status
-
-**Staff Account Actions:**
-- **Edit**: Modify staff member details
-- **Activate**: Enable login access for deactivated accounts
-- **Deactivate**: Disable login access while preserving account
-- **Delete**: Permanently remove staff account
-
-**4. Real-time Data Refresh**
-- Auto-refreshes every 10 seconds
-- Ensures admin sees latest organizational changes
-
-**5. Confirmation Modals**
-- All destructive actions require confirmation
-- Different modal tones:
-  - Default (blue) for standard confirmations
-  - Danger (red) for destructive actions (delete, deactivate)
-
-**6. Navigation**
-- Header with logout button
-- Subtitle explaining dashboard purpose
-
-#### Admin Dashboard Sections (Top to Bottom)
-
-1. **Header**: Admin Dashboard title with logout button
-2. **Add Department Form**: Create new departments
-3. **Add Division Form**: Create divisions linked to departments
-4. **Departments List**: View, edit, delete departments
-5. **Divisions List**: View, edit, delete divisions
-6. **Staff List**: View, edit, activate/deactivate, delete staff
-
-#### User Flow
-
-```
-Admin Login → Dashboard → Manage Departments 
-→ Manage Divisions → Manage Staff → Logout
-```
-
-#### Security Considerations
-
-- Admin dashboard only accessible to users with `role='Admin'`
-- Protected route checks user role before rendering
-- Deactivated staff cannot log in even with valid credentials
-- All delete operations require explicit confirmation
-
----
-
-### Admin Dashboard - Extended Features
-
-The admin dashboard includes additional features for comprehensive system management:
-
-#### 7. Notifications System
-
-| Component | Description |
-|-----------|-------------|
-| Bell Icon | Shows notification count badge in header |
-| Dropdown Panel | Quick view of recent notifications |
-| Full Notifications Page | Complete notification history with filters |
-| Mark as Read | Click to mark individual notifications as read |
-| Mark All Read | Bulk action to clear unread count |
-| Notification Types | Appointment created, status updates, staff actions |
-
-**Notification Bell Features:**
-- Red badge showing unread count
-- Dropdown preview of 5 most recent notifications
-- Click to navigate to full notifications page
-- Visual indicators for read/unread status
-
-**Notifications Page Features:**
-- Filter by: All, Unread, Appointment, Staff
-- Chronological list with timestamps
-- Click to view full notification details
-- "Mark all as read" button
-
-#### 8. Analytics Panel
-
-The admin dashboard includes an analytics section showing key metrics:
-
-| Metric | Description |
-|--------|-------------|
-| Total Appointments | All appointments in the system |
-| Pending | Appointments awaiting staff response |
-| Accepted | Successfully booked appointments |
-| Declined | Rejected appointments |
-| This Month | Appointments from current month |
-| Staff Count | Total active staff members |
-
-**Analytics Cards:**
-- Visual cards with icons for each metric
-- Color-coded status indicators
-- Real-time updates when data changes
-
-#### 9. Appointment Management & Reassignment
-
-Admin has full visibility and control over all appointments:
-
-| Feature | Description |
-|---------|-------------|
-| Global View | See all appointments across all staff |
-| Filter by Status | View Pending, Accepted, Declined, or All |
-| Search | Search by visitor name or email |
-| Reassign | Transfer appointments between staff members |
-| View Details | See full appointment information |
-
-**Reassignment Workflow:**
-1. Click on an appointment to view details
-2. Click "Reassign" button
-3. Select new staff member from dropdown
-4. Confirm reassignment
-5. Visitor and new staff receive notifications
-
-**Staff Dropdown:**
-- Shows only active staff members
-- Groups by department/division
-- Searchable list for large organizations
-
-#### 10. Admin-Controlled Staff Creation
-
-Security enhancement - only admins can create staff accounts:
-
-| Feature | Description |
-|---------|-------------|
-| Admin-Only Creation | Staff cannot self-register |
-| Create Form | Admin fills in all staff details |
-| Temporary Password | System generates or admin sets password |
-| Email Invitation | Staff receives login credentials via email |
-| Role Assignment | Assign Staff or Admin role during creation |
-
-**Staff Creation Form Fields:**
-- Full Name (required)
-- Email (required, must be unique)
-- Department (required)
-- Division (required)
-- Role (Staff/Admin, required)
-- Initial Password (admin-set or auto-generated)
-
----
-
-## API Endpoints
-
-### Authentication
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/staff/login/` | Staff login (returns JWT tokens) |
-| POST | `/api/staff/register/` | Staff self-registration (Admin only) |
-| POST | `/api/staff/token/refresh/` | Refresh access token |
-| GET | `/api/staff/me/` | Get current staff profile |
-| PATCH | `/api/staff/me/` | Update current staff profile (including availability status) |
-| PUT | `/api/staff/me/fcm-token/` | Update user's FCM token |
-| POST | `/api/staff/create/` | Admin-only staff account creation |
-| POST | `/api/staff/{id}/reset-password/` | Admin password reset for staff |
-| PATCH | `/api/staff/{id}/activate/` | Activate staff account |
-
-### Staff
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/staff/` | List staff members |
-| GET | `/api/staff/?department_id={id}` | Filter staff by department |
-| GET | `/api/staff/?division_id={id}` | Filter staff by division |
-| GET | `/api/staff/?include_inactive=1` | Include inactive staff |
-| GET | `/api/staff/{id}/` | Get staff member details |
-| PATCH | `/api/staff/{id}/` | Update staff member |
-| PATCH | `/api/staff/{id}/deactivate/` | Deactivate staff account |
-| PATCH | `/api/staff/{id}/activate/` | Activate staff account |
-| DELETE | `/api/staff/{id}/` | Delete staff account |
-
-### Departments
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/departments/` | List all departments |
-| POST | `/api/departments/` | Create new department |
-| GET | `/api/departments/{id}/` | Get department details |
-| PATCH | `/api/departments/{id}/` | Update department |
-| DELETE | `/api/departments/{id}/` | Delete department |
-
-### Divisions
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/divisions/` | List all divisions |
-| POST | `/api/divisions/` | Create new division |
-| GET | `/api/divisions/?department_id={id}` | Filter divisions by department |
-| PATCH | `/api/divisions/{id}/` | Update division |
-| DELETE | `/api/divisions/{id}/` | Delete division |
-
-### Appointments
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/appointments/create/` | Create new appointment |
-| GET | `/api/appointments/my/` | Get staff's appointments |
-| GET | `/api/appointments/all/` | Admin: Get all appointments |
-| PUT | `/api/appointments/update/{id}/` | Update appointment status |
-| PATCH | `/api/appointments/reassign/{id}/` | Reassign appointment to different staff |
-| DELETE | `/api/appointments/{id}/` | Delete appointment |
-
----
-
-## Authentication & Authorization
-
-### JWT Authentication
-
-The system uses JSON Web Tokens for authentication:
-
-- **Access Token**: Short-lived token for API requests
-- **Refresh Token**: Longer-lived token for obtaining new access tokens
-- Tokens stored in localStorage on the frontend
-
-### Role-based Access Control
-
-| Role | Access Level |
-|------|--------------|
-| Visitor | Home page only, no authentication required |
-| Staff | Staff dashboard, manage own appointments |
-| Admin | Admin dashboard, full system management |
-
-### Protected Routes
-
-```javascript
-// Staff routes - accessible by Staff and Admin
-<ProtectedRoute roles={['Staff', 'Admin']}>
-  <StaffDashboardPage />
-</ProtectedRoute>
-
-// Admin routes - accessible only by Admin
-<ProtectedRoute roles={['Admin']} loginPath="/admin/login">
-  <AdminDashboardPage />
-</ProtectedRoute>
-```
-
----
-
-## Notifications
-
-### Email Notifications (EmailJS)
-
-**Appointment Request Email**
-- Sent to staff when visitor submits appointment request
-- Contains: visitor name, email, department, division, requested date, message
-
-**Appointment Response Email**
-- Sent to visitor when staff responds to appointment
-- Contains: staff response (Accepted/Rescheduled/Declined), response note
-
-### Push Notifications (Firebase Cloud Messaging)
-
-- Staff can register device tokens for push notifications
-- Admin panel includes FCM token update functionality
-- Real-time updates when new appointments arrive
-- Service worker handles background push events
-
----
-
-## Project Structure
-
-```
-smart-appointment-booking-system/
-├── backend/
-│   ├── config/              # Django project settings
-│   ├── appointments/        # Appointment models, views, serializers
-│   ├── departments/         # Department and Division models
-│   ├── users/               # Custom User model and authentication
-│   ├── notifications/       # Email and push notification services
-│   ├── manage.py
-│   ├── requirements.txt
-│   └── .env.example
-│
-├── frontend/
-│   ├── public/
-│   │   ├── icons/           # PWA icons
-│   │   ├── images/         # Static images
-│   │   ├── sounds/         # Notification sounds
-│   │   ├── manifest.json   # PWA manifest
-│   │   └── sw.js          # Service worker
-│   ├── src/
-│   │   ├── components/     # Reusable React components
-│   │   ├── context/        # React Context (Auth, Appointments, Notifications)
-│   │   ├── pages/          # Page components
-│   │   │   ├── HomePage.jsx
-│   │   │   ├── StaffLoginPage.jsx
-│   │   │   ├── StaffDashboardPage.jsx
-│   │   │   ├── AdminLoginPage.jsx
-│   │   │   ├── AdminSignupPage.jsx
-│   │   │   └── AdminDashboardPage.jsx
-│   │   ├── services/       # API, EmailJS, Firebase services
-│   │   ├── styles.css
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   ├── package.json
-│   ├── vite.config.js
-│   └── .env.example
-│
-├── README.md
-└── .gitignore
-```
-
----
-
-## Backend Setup
-
-### 1. Create Virtual Environment
 
 ```bash
 cd backend
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-```
-
-### 2. Install Dependencies
-
-```bash
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3. Configure Environment Variables
-
-Create a `.env` file in the `backend/` directory:
+Create `.env` (use `.env.example` as reference):
 
 ```env
-DJANGO_SECRET_KEY=your-secret-key
+DJANGO_SECRET_KEY=... (required for cryptographic signing)
 DJANGO_DEBUG=True
 DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
-
-# Database
 DB_ENGINE=django.db.backends.postgresql
 DB_NAME=appointment_db
 DB_USER=postgres
-DB_PASSWORD=your-password
+DB_PASSWORD=password
 DB_HOST=localhost
 DB_PORT=5432
-
-# Email (EmailJS)
 EMAIL_HOST_USER=your-emailjs-service-id
 EMAIL_HOST_PASSWORD=your-emailjs-public-key
 DEFAULT_FROM_EMAIL=noreply@example.com
-
-# Firebase
-FIREBASE_SERVER_KEY=your-firebase-server-key
+FIREBASE_SERVER_KEY=server-key
 ```
 
-### 4. Run Migrations
+Then run migrations and start server:
 
 ```bash
 python manage.py makemigrations
 python manage.py migrate
+python manage.py createsuperuser      # optional but helpful for admin panel
+python manage.py runserver           # listens on http://localhost:8000
 ```
 
-### 5. Create Superuser
-
-```bash
-python manage.py createsuperuser
-```
-
-### 6. Run Development Server
-
-```bash
-python manage.py runserver
-```
-
-The backend will be available at `http://localhost:8000`
-
----
-
-## Frontend Setup
-
-### 1. Install Dependencies
+### Frontend
 
 ```bash
 cd frontend
 npm install
 ```
 
-### 2. Configure Environment Variables
-
-Create a `.env.local` file in the `frontend/` directory:
+Create `.env.local` (refer to `.env.example`):
 
 ```env
 VITE_API_BASE_URL=http://localhost:8000/api
-
-# Firebase Configuration
-VITE_FIREBASE_API_KEY=your-api-key
-VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your-project-id
-VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
-VITE_FIREBASE_APP_ID=your-app-id
-VITE_FIREBASE_VAPID_KEY=your-vapid-key
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_STORAGE_BUCKET=...
+VITE_FIREBASE_MESSAGING_SENDER_ID=...
+VITE_FIREBASE_APP_ID=...
+VITE_FIREBASE_VAPID_KEY=...
 ```
 
-### 3. Run Development Server
+Start the dev server:
 
 ```bash
-npm run dev
+npm run dev              # runs on http://localhost:5173 by default
 ```
 
-The frontend will be available at `http://localhost:5173`
+Use `npm run lint` or other npm scripts if configured.
 
 ---
 
-## Environment Variables Reference
+## Testing & Quality
 
-### Backend
+- **Backend tests**: Use Django’s `manage.py test` when available. Focus on appointment serializer validation, viewset permissions, and notification dispatch logic.
+- **Frontend tests**: Add Jest/React Testing Library tests for components, if introduced. (Currently the repo relies on manual QA.)
+- **Linting**: Run `npm run lint` for frontend and adopt `ruff` or `flake8` for backend if added later.
 
-| Variable | Description |
-|----------|-------------|
-| `DJANGO_SECRET_KEY` | Django secret key for cryptographic signing |
-| `DJANGO_DEBUG` | Enable debug mode (True/False) |
-| `DJANGO_ALLOWED_HOSTS` | Comma-separated allowed hostnames |
-| `DB_ENGINE` | Database engine (postgresql) |
-| `DB_NAME` | Database name |
-| `DB_USER` | Database username |
-| `DB_PASSWORD` | Database password |
-| `DB_HOST` | Database host |
-| `DB_PORT` | Database port |
-| `EMAIL_HOST_USER` | EmailJS Service ID |
-| `EMAIL_HOST_PASSWORD` | EmailJS Public Key |
-| `DEFAULT_FROM_EMAIL` | Default sender email address |
-| `FIREBASE_SERVER_KEY` | Firebase Cloud Messaging server key |
-
-### Frontend
-
-| Variable | Description |
-|----------|-------------|
-| `VITE_API_BASE_URL` | Backend API base URL |
-| `VITE_FIREBASE_API_KEY` | Firebase API key |
-| `VITE_FIREBASE_AUTH_DOMAIN` | Firebase auth domain |
-| `VITE_FIREBASE_PROJECT_ID` | Firebase project ID |
-| `VITE_FIREBASE_STORAGE_BUCKET` | Firebase storage bucket |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase messaging sender ID |
-| `VITE_FIREBASE_APP_ID` | Firebase app ID |
-| `VITE_FIREBASE_VAPID_KEY` | Firebase VAPID key for push notifications |
+Automated CI pipelines should run both backend and frontend suites along with formatting checks.
 
 ---
 
-## Production Considerations
+## Operational Considerations
 
-### Security
-
-1. **CORS**: Lock CORS to known frontend origins in production
-2. **HTTPS**: Enable HTTPS for secure communication
-3. **Environment Variables**: Use secure environment variable management
-4. **Token Expiry**: Adjust JWT token expiry times for production
-5. **Admin Access**: Restrict admin dashboard access to trusted users
-
-### PWA Optimization
-
-1. **Icons**: Add proper PWA icons in `frontend/public/icons/`
-2. **Service Worker**: Update caching strategies for production
-3. **Manifest**: Customize app name, theme color, and icons
-
-### Push Notifications
-
-1. **FCM Migration**: Migrate from legacy FCM to HTTP v1 API
-2. **Service Account**: Use Firebase service account for authentication
-3. **Token Management**: Implement proper token refresh handling
-
-### Performance
-
-1. **Database Indexing**: Add indexes on frequently queried fields
-2. **Caching**: Implement Redis or similar for API response caching
-3. **Static Files**: Use CDN for static file delivery
-4. **Pagination**: Add pagination to list endpoints
+- **Deployment**: Serve frontend build via CDN or static hosting and proxy API requests to the Django REST API. Use Gunicorn/Uvicorn behind Nginx for backend.
+- **Database**: Back PostgreSQL with daily backups and connection pooling.
+- **Caching**: Use Redis to cache department/division lookup tables and reduce DB load.
+- **Monitoring**: Integrate Sentry (or equivalent) for backend error tracking and React error boundaries for the frontend.
+- **PWA**: Ensure HTTPS + valid manifest + service worker for installability. Sync `start_url` and `scope` with production base path.
 
 ---
 
-## License
+## Troubleshooting & FAQs
 
-This project is available for personal and commercial use.
+- **Visitor form fails on submit**: Check console for validation errors (missing fields or invalid email). Backend response includes detail of failed field.
+- **FCM tokens not updating**: Confirm `/api/staff/me/fcm-token/` receives POST with `token`. Frontend stores tokens in localStorage after login.
+- **EmailJS not sending**: Verify service ID and template ID in `.env`. EmailJS logs show errors when payloads misalign.
+- **Staff cannot log in**: Ensure staff account is active (`is_active=True`) and refreshing tokens (`/api/staff/token/refresh/`) in case access token expired.
+- **Admin deletes department by mistake**: Recreate department/division via dashboard; appointments linked to old records need manual update.
+
+---
+
+## Contribution Guidelines
+
+1. Branch from `master` into a descriptive feature/bugfix branch.
+2. Keep backend changes within `backend/` and frontend within `frontend/`; shared docs or infra may touch both.
+3. Run formatters (`black`, `npm run format`) before submitting.
+4. Include tests for new API views or components.
+5. Describe manual steps to verify features in your PR description.
+6. For large refactors, open a design discussion issue first.
+
+---
+
+By following this README you can run the PWA locally, understand core flows, and safely extend the Smart Appointment Booking System with new functionality.

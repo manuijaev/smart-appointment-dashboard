@@ -210,8 +210,8 @@ export default function StaffDashboardPage() {
       unsubscribe = await subscribeToForegroundMessages((payload) => {
         // Handle incoming push notification
         const { notification, data } = payload;
-        const title = notification?.title || 'New Appointment';
-        const body = notification?.body || 'You have a new appointment request';
+        const title = notification?.title || 'Visitor waiting';
+        const body = notification?.body || 'You have a visitor waiting for you';
         
         // Create notification object
         const newNotification = {
@@ -377,12 +377,16 @@ export default function StaffDashboardPage() {
         staff_name: appointment.staff_name || 'Staff',
         staff_email: appointment.staff_email || '',
       });
+      const toastMessage =
+        status === 'Accepted'
+          ? "Visitor notified — they've been paged"
+          : `Response submitted to ${appointment.visitor_name}.`;
       if (!emailResult?.sent) {
         setNotice(`Status updated, but email was not sent: ${emailResult?.error || 'EmailJS error'}`);
-        setToast(`Response submitted to ${appointment.visitor_name}.`);
+        setToast(toastMessage);
       } else {
         setNotice('Status updated and visitor email sent.');
-        setToast(`Response submitted to ${appointment.visitor_name}.`);
+        setToast(toastMessage);
       }
     }
   };
@@ -481,7 +485,7 @@ export default function StaffDashboardPage() {
   const handleExportCSV = () => {
     const data = filteredAppointments.length > 0 ? filteredAppointments : appointments;
     if (data.length === 0) {
-      showToast('No appointments to export');
+      showToast('No visit requests to export');
       return;
     }
     
@@ -503,19 +507,19 @@ export default function StaffDashboardPage() {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `appointments_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `visit_requests_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
-    showToast('Appointments exported to CSV');
+    showToast('Visit requests exported to CSV');
   };
 
   const handleExportStats = () => {
     const statsData = [
-      { Metric: 'Total Appointments', Value: appointments.length },
+      { Metric: 'Total visit requests', Value: appointments.length },
       { Metric: 'Pending', Value: appointments.filter(a => a.status === 'Pending').length },
       { Metric: 'Accepted', Value: appointments.filter(a => a.status === 'Accepted').length },
       { Metric: 'Declined', Value: appointments.filter(a => a.status === 'Declined').length },
       { Metric: 'Rescheduled', Value: appointments.filter(a => a.status === 'Rescheduled').length },
-      { Metric: 'Today\'s Appointments', Value: appointments.filter(a => a.appointment_date.startsWith(today)).length },
+      { Metric: 'Today\'s visit requests', Value: appointments.filter(a => a.appointment_date.startsWith(today)).length },
       { Metric: 'Acceptance Rate', Value: appointments.length > 0 ? Math.round((appointments.filter(a => a.status === 'Accepted').length / appointments.length) * 100) + '%' : '0%' },
     ];
     
@@ -615,7 +619,7 @@ export default function StaffDashboardPage() {
             {ICONS.dashboard}<span>Dashboard</span>
           </button>
           <button className={`sd-nav-item ${activeTab === 'appointments' ? 'active' : ''}`} onClick={() => { setActiveTab('appointments'); setSidebarOpen(false); }}>
-            {ICONS.calendar}<span>Appointments</span>
+            {ICONS.calendar}<span>Visitor queue</span>
             <span className="sd-nav-badge">{stats.pending}</span>
           </button>
           <button className={`sd-nav-item ${activeTab === 'schedule' ? 'active' : ''}`} onClick={() => { setActiveTab('schedule'); setSidebarOpen(false); }}>
@@ -639,7 +643,7 @@ export default function StaffDashboardPage() {
 
           <div className="sd-nav-section">ACTIONS</div>
           <button className="sd-nav-item" onClick={() => { handleExportCSV(); setSidebarOpen(false); }}>
-            {ICONS.download}<span>Export Appointments</span>
+            {ICONS.download}<span>Export visitor queue</span>
           </button>
           <button className="sd-nav-item" onClick={() => { setActiveTab('settings'); setSidebarOpen(false); }}>
             {ICONS.settings}<span>Settings</span>
@@ -665,7 +669,7 @@ export default function StaffDashboardPage() {
               {ICONS.search}
               <input 
                 type="text" 
-                placeholder="Search appointments..." 
+                placeholder="Search visitor requests..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -786,7 +790,7 @@ export default function StaffDashboardPage() {
                 <div className="sd-actions-grid">
                   <button className="sd-action-card" onClick={() => setActiveTab('appointments')}>
                     <div className="sd-action-icon sd-action-icon-teal">{ICONS.calendar}</div>
-                    <span>View All Appointments</span>
+                    <span>View visitor queue</span>
                   </button>
                   <button className="sd-action-card" onClick={() => setActiveTab('pending')}>
                     <div className="sd-action-icon sd-action-icon-gold">{ICONS.activity}</div>
@@ -807,7 +811,7 @@ export default function StaffDashboardPage() {
                   </div>
                   <div className="sd-list">
                     {recentAppointments.length === 0 ? (
-                      <div className="sd-empty">No recent appointments</div>
+                      <div className="sd-empty">No recent visitor requests</div>
                     ) : (
                       recentAppointments.map(apt => (
                         <div key={apt.id} className="sd-list-item" onClick={() => openPreview(apt)}>
@@ -836,7 +840,7 @@ export default function StaffDashboardPage() {
                   </div>
                   <div className="sd-list">
                     {upcomingAppointments.length === 0 ? (
-                      <div className="sd-empty">No upcoming appointments</div>
+                      <div className="sd-empty">No upcoming visit requests</div>
                     ) : (
                       upcomingAppointments.map(apt => (
                         <div key={apt.id} className="sd-list-item" onClick={() => openPreview(apt)}>
@@ -882,8 +886,8 @@ export default function StaffDashboardPage() {
                 {filteredAppointments.length === 0 ? (
                   <div className="sd-empty-state">
                     {ICONS.calendar}
-                    <h3>No appointments found</h3>
-                    <p>There are no appointments matching your criteria.</p>
+                    <h3>No visit requests found</h3>
+                    <p>There are no visit requests matching your criteria.</p>
                   </div>
                 ) : (
                   filteredAppointments.map(apt => {
@@ -978,7 +982,7 @@ export default function StaffDashboardPage() {
                 </div>
                 <div className="sd-timeline">
                   {appointments.filter(a => a.appointment_date.startsWith(today)).length === 0 ? (
-                    <div className="sd-empty">No appointments scheduled for today</div>
+                    <div className="sd-empty">No visit requests scheduled for today</div>
                   ) : (
                     appointments
                       .filter(a => a.appointment_date.startsWith(today))
@@ -1108,7 +1112,7 @@ export default function StaffDashboardPage() {
         title={`Confirm ${pendingStatusUpdate?.status || ''}`}
         message={
           pendingStatusUpdate
-            ? `Update ${pendingStatusUpdate.visitorName}'s appointment to "${pendingStatusUpdate.status}"?`
+            ? `Update ${pendingStatusUpdate.visitorName}'s visit request to "${pendingStatusUpdate.status}"?`
             : ''
         }
         confirmText="Yes, Update"
@@ -1125,11 +1129,11 @@ export default function StaffDashboardPage() {
       {/* Delete Modal */}
       <ConfirmModal
         isOpen={Boolean(pendingDelete)}
-        title="Delete Appointment(s)?"
+        title="Delete visit request(s)?"
         message={
           pendingDelete?.type === 'single'
-            ? 'Delete this appointment?'
-            : `Delete ${pendingDelete?.ids?.length || 0} selected appointments?`
+            ? 'Delete this visit request?'
+            : `Delete ${pendingDelete?.ids?.length || 0} selected visit requests?`
         }
         confirmText="Delete"
         tone="danger"

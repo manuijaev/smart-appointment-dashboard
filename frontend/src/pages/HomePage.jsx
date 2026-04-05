@@ -366,13 +366,13 @@ export default function HomePage() {
       
       setReferenceNumber(data.reference_number || `GPX-${Date.now()}`);
       setShowSuccess(true);
-      showToastMessage('Appointment submitted successfully!');
+      showToastMessage('Visit request submitted successfully!');
     } catch (error) {
-      console.error('Failed to submit appointment:', error);
+      console.error('Failed to submit visit request:', error);
       const detail = error?.response?.data;
       const firstField = detail && typeof detail === 'object' ? Object.keys(detail)[0] : null;
       const fieldMessage = firstField ? `${firstField}: ${detail[firstField]}` : null;
-      showToastMessage(fieldMessage || 'Failed to submit appointment. Please try again.');
+      showToastMessage(fieldMessage || 'Failed to submit visit request. Please try again.');
     }
   };
 
@@ -613,7 +613,7 @@ export default function HomePage() {
         <div className="reception-banner">
           <span className="rb-icon icon" aria-hidden="true">{ICONS.monitor}</span>
           <span className="rb-text">
-            <strong>Receptionist Mode Active</strong> - You are booking on behalf of a walk-in visitor.
+            <strong>Receptionist Mode Active</strong> - You are checking in on behalf of a walk-in visitor.
             All fields are required. Visitor will receive email confirmation.
           </span>
           <span className="rb-switch" onClick={toggleMode}>Switch to Visitor Mode</span>
@@ -631,7 +631,7 @@ export default function HomePage() {
           </div>
           <div>
             <div className="nav-name">Gatepass</div>
-            <div className="nav-tagline">Appointment System</div>
+            <div className="nav-tagline">Visitor management system</div>
           </div>
         </div>
         <button
@@ -647,7 +647,7 @@ export default function HomePage() {
         </button>
 
         <div className="nav-center">
-          <div className="nav-tab active" onClick={() => { setHomeNavOpen(false); scrollToTop(); }}>Book Appointment</div>
+          <div className="nav-tab active" onClick={() => { setHomeNavOpen(false); scrollToTop(); }}>Visitor Check-in</div>
           <div className="nav-tab" onClick={() => { setHomeNavOpen(false); scrollToSection('how'); }}>How It Works</div>
           <div className="nav-tab" onClick={() => { setHomeNavOpen(false); scrollToSection('departments'); }}>Departments</div>
         </div>
@@ -665,7 +665,7 @@ export default function HomePage() {
           </button>
         </div>
         <div className={`nav-mobile ${homeNavOpen ? 'open' : ''}`}>
-          <button className="nav-tab" onClick={() => { setHomeNavOpen(false); scrollToTop(); }}>Book Appointment</button>
+          <button className="nav-tab" onClick={() => { setHomeNavOpen(false); scrollToTop(); }}>Visitor Check-in</button>
           <button className="nav-tab" onClick={() => { setHomeNavOpen(false); scrollToSection('how'); }}>How It Works</button>
           <button className="nav-tab" onClick={() => { setHomeNavOpen(false); scrollToSection('departments'); }}>Departments</button>
           <button className="nav-btn nav-btn-ghost" onClick={() => { setHomeNavOpen(false); toggleMode(); }}>
@@ -681,23 +681,22 @@ export default function HomePage() {
       <section className="hero">
         {/* Left: Copy */}
         <div className="hero-left">
-          <div className="hero-overline">Appointment Booking System</div>
+          <div className="hero-overline">Visitor Management Desk</div>
 
           <h1 className="hero-title">
-            Schedule your<br />
-            <em>visit with ease.</em><br />
+            Let your host know<br />
+            <em>you're here.</em><br />
             <span className="line2">We will handle the rest.</span>
           </h1>
 
           <p className="hero-desc">
-            Book an appointment with any <strong>staff member</strong> across our departments.
-            Get instant confirmation to your email and real-time updates on your request.
+            Submit a quick visit request so reception can alert the right person instantly.
           </p>
 
           <div className="hero-cta-row">
             <button className="cta-primary" onClick={() => setShowBookingModal(true)}>
               <span className="icon" aria-hidden="true">{ICONS.clipboard}</span>
-              Book an Appointment
+              Alert My Host
             </button>
             <div className="cta-secondary" onClick={() => scrollToSection('how')}>
               See how it works
@@ -727,18 +726,18 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Right: Booking Form */}
+        {/* Right: Visit request form */}
         <div className="hero-right">
           <div className="form-panel">
             {!showSuccess ? (
               <>
                 <div className="form-panel-header">
-                  <div className="form-panel-title">Book an Appointment</div>
-                  <div className="form-panel-sub">Fill in each step below. Takes less than 2 minutes.</div>
+                  <div className="form-panel-title">Visit check-in</div>
+                  <div className="form-panel-sub">Let us know you're here so reception can notify your host.</div>
                 </div>
                 {prefillSelection && (
                   <div className="prefill-banner">
-                    Booking with <strong>{prefillSelection.staffName}</strong> · {prefillSelection.departmentName}
+                    Visit request for <strong>{prefillSelection.staffName}</strong> · {prefillSelection.departmentName}
                     {prefillSelection.divisionName ? ` · ${prefillSelection.divisionName}` : ''}
                   </div>
                 )}
@@ -774,7 +773,7 @@ export default function HomePage() {
                       value={formData.visitor_name}
                       onChange={(e) => handleInputChange('visitor_name', e.target.value)}
                     />
-                    <div className="field-hint">Enter your full name as it appears on your ID</div>
+                    <div className="field-hint">Your name as you'd like to be announced</div>
                   </div>
                   <div className="field">
                     <label className="field-label">Phone Number</label>
@@ -810,12 +809,12 @@ export default function HomePage() {
                       value={formData.visitor_email}
                       onChange={(e) => handleInputChange('visitor_email', e.target.value)}
                     />
-                    <div className={`field-hint ${validation.emailValid ? 'field-valid-msg' : ''} ${validation.emailError ? 'field-error' : ''}`}>
-                      {validation.emailValid 
-                        ? `Confirmation will be sent to ${formData.visitor_email}`
-                        : 'Your appointment confirmation and updates will be sent here'
-                      }
-                    </div>
+                      <div className={`field-hint ${validation.emailValid ? 'field-valid-msg' : ''} ${validation.emailError ? 'field-error' : ''}`}>
+                        {validation.emailValid 
+                          ? `Confirmation will be sent to ${formData.visitor_email}`
+                          : 'Your visit confirmation and updates will be sent here'
+                        }
+                      </div>
                   </div>
                   <div className="step-nav">
                     <button className="step-btn step-back" onClick={() => goToStep(1)}>Back</button>
@@ -829,18 +828,18 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* Step 3: Department */}
+                {/* Step 3: Host details */}
                 <div className={`step-view ${currentStep === 3 ? 'active' : ''}`} id="step3">
-                  <div className="step-label">Step 3 of 7 - Department</div>
+                  <div className="step-label">Step 3 of 7 - Host details</div>
                   <div className="field">
-                    <label className="field-label">Which department? <span className="field-required">*</span></label>
+                    <label className="field-label">Who are you here to see? <span className="field-required">*</span></label>
                     <div className="select-wrap">
                       <select 
                         className="field-input"
                         value={formData.department}
                         onChange={(e) => handleInputChange('department', e.target.value)}
                       >
-                        <option value="">Choose a department...</option>
+                        <option value="">Search by department or staff name</option>
                         {departments.map((dept) => (
                           <option key={dept.id} value={dept.id}>{dept.name}</option>
                         ))}
@@ -892,9 +891,9 @@ export default function HomePage() {
 
                 {/* Step 5: Staff */}
                 <div className={`step-view ${currentStep === 5 ? 'active' : ''}`} id="step5">
-                  <div className="step-label">Step 5 of 7 - Select Staff Member</div>
+                  <div className="step-label">Step 5 of 7 - Select your host</div>
                   <div className="field">
-                    <label className="field-label">Who would you like to meet? <span className="field-required">*</span></label>
+                    <label className="field-label">Select your host <span className="field-required">*</span></label>
                     <div className="staff-cards">
                       {staff.length > 0 ? (
                         staff.map((s, index) => {
@@ -952,11 +951,11 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* Step 6: Date */}
+                {/* Step 6: Arrival */}
                 <div className={`step-view ${currentStep === 6 ? 'active' : ''}`} id="step6">
-                  <div className="step-label">Step 6 of 7 - Preferred Date & Time</div>
+                  <div className="step-label">Step 6 of 7 - Expected arrival time</div>
                   <div className="field">
-                    <label className="field-label">Appointment Date & Time <span className="field-required">*</span> (EAT Timezone)</label>
+                    <label className="field-label">Expected arrival time <span className="field-required">*</span> (EAT Timezone)</label>
                     <input 
                       type="datetime-local" 
                       className={`field-input ${validation.dateValid ? 'valid' : ''} ${validation.dateError ? 'error' : ''}`}
@@ -968,12 +967,12 @@ export default function HomePage() {
                     <div className={`field-hint ${validation.dateValid ? 'field-valid-msg' : ''} ${validation.dateError ? 'field-error' : ''}`}>
                       {validation.dateValid
                         ? formatDate(formData.appointment_date)
-                        : 'Office hours: Monday-Friday, 8:00 AM - 5:00 PM EAT (UTC+3)'
+                        : 'Leave blank if you are already on site.'
                       }
                     </div>
                   </div>
                   <div className="info-box">
-                    Please select a future date and time within office hours (8 AM - 5 PM EAT). The staff member will confirm or suggest an alternative time.
+                    Prefer a future arrival? Choose within office hours (8 AM - 5 PM EAT) so we can badge your host. If you are already waiting, leave this blank and reception will note your walk-in.
                   </div>
                   <div className="step-nav">
                     <button className="step-btn step-back" onClick={() => goToStep(5)}>Back</button>
@@ -993,7 +992,7 @@ export default function HomePage() {
 
                   {/* Summary Card */}
                   <div className="summary-card">
-                    <div className="summary-title">Booking Summary</div>
+                    <div className="summary-title">Visit summary</div>
                     <div className="summary-content">
                       <div className="summary-row">
                         <span className="summary-label">Visitor</span>
@@ -1032,25 +1031,25 @@ export default function HomePage() {
 
                   <div className="info-box">
                     <span className="icon" aria-hidden="true">{ICONS.mail}</span>
-                    <span>A confirmation will be sent to <strong>{formData.visitor_email}</strong>. The staff member will accept, decline, or suggest a new time - you will be notified instantly.</span>
+                    <span>A confirmation will be sent to <strong>{formData.visitor_email}</strong>. Reception will notify you once your host responds.</span>
                   </div>
 
                   <div className="step-nav">
                     <button className="step-btn step-back" onClick={() => goToStep(6)}>Back</button>
                     <button className="step-btn step-submit" onClick={submitBooking}>
-                      Submit Request
+                      Submit visit request
                     </button>
                   </div>
                 </div>
               </>
             ) : (
               /* Success Screen */
-              <div className="success-screen show">
+                <div className="success-screen show">
                 <div className="success-icon icon" aria-hidden="true">{ICONS.checkCircle}</div>
-                <div className="success-title">Appointment Requested!</div>
+                <div className="success-title">Visit request submitted!</div>
                 <div className="success-sub">
-                  Your request has been sent to <strong>{getStaffName(formData.staff_member)}</strong>. 
-                  You will receive an email confirmation and a push notification when they respond.
+                  Your visit request has been sent to <strong>{getStaffName(formData.staff_member)}</strong>. 
+                  Reception will notify you by email and push when they respond.
                 </div>
                 <div className="success-ref">REF: {referenceNumber}</div>
                 <div className="success-detail">
@@ -1076,7 +1075,7 @@ export default function HomePage() {
                 </div>
                 <div className="success-actions">
                   <button className="step-btn step-back" style={{ borderColor: 'var(--border2)' }} onClick={resetForm}>
-                    Book another
+                    Submit another visit request
                   </button>
                   <button className="step-btn step-next" onClick={() => showToastMessage('Confirmation resent to your email!')}>
                     Resend confirmation
@@ -1092,27 +1091,22 @@ export default function HomePage() {
       <section className="section section-alt" id="how">
         <div className="section-label">Process</div>
         <div className="section-title">How it <em>works</em></div>
-        <div className="section-sub">Book an appointment with any staff member in under 2 minutes. No calls, no queues.</div>
+        <div className="section-sub">Submit a visitor check-in and reception will alert your host within seconds.</div>
         <div className="how-steps">
           <div className="how-step">
             <div className="how-num">1</div>
-            <div className="how-step-title">Enter your details</div>
-            <div className="how-step-desc">Provide your name and email so we can confirm your appointment and keep you updated.</div>
+            <div className="how-step-title">Enter your host&apos;s name</div>
+            <div className="how-step-desc">Type the person or department you are here to see so reception knows who to notify.</div>
           </div>
           <div className="how-step">
             <div className="how-num">2</div>
-            <div className="how-step-title">Choose department and staff</div>
-            <div className="how-step-desc">Select the department, division, and the specific staff member you would like to meet.</div>
+            <div className="how-step-title">Confirm your visit purpose</div>
+            <div className="how-step-desc">Let us know why you are visiting so the host gets the right context before they respond.</div>
           </div>
           <div className="how-step">
             <div className="how-num">3</div>
-            <div className="how-step-title">Pick a date and time</div>
-            <div className="how-step-desc">Choose your preferred time slot. The staff member will confirm or suggest a new time.</div>
-          </div>
-          <div className="how-step">
-            <div className="how-num">4</div>
-            <div className="how-step-title">Get notified instantly</div>
-            <div className="how-step-desc">Receive an email and push notification the moment your request is accepted or updated.</div>
+            <div className="how-step-title">Reception alerts the host instantly</div>
+            <div className="how-step-desc">Reception will page or message your host and keep you updated as soon as they respond.</div>
           </div>
         </div>
       </section>
@@ -1121,7 +1115,7 @@ export default function HomePage() {
       <section className="section">
         <div className="section-label">Features</div>
         <div className="section-title">Everything you <em>need</em></div>
-        <div className="section-sub">A modern appointment system built for both walk-in visitors and receptionists managing bookings.</div>
+        <div className="section-sub">A modern visitor management tool for receptionists and hosts coordinating walk-ins and scheduled visits.</div>
         <div className="feature-grid">
           <div className="feature-card">
             <div className="fc-icon" style={{ background: 'var(--gold-light)' }}>
@@ -1135,14 +1129,14 @@ export default function HomePage() {
               <span className="icon" aria-hidden="true">{ICONS.bell}</span>
             </div>
             <div className="fc-title">Push Notifications</div>
-            <div className="fc-desc">Enable push notifications and get alerted on your phone the second your appointment status changes.</div>
+            <div className="fc-desc">Enable push notifications and get alerted the second your visitor check-in status changes.</div>
           </div>
           <div className="feature-card">
             <div className="fc-icon" style={{ background: 'var(--green-light)' }}>
               <span className="icon" aria-hidden="true">{ICONS.check}</span>
             </div>
             <div className="fc-title">Real-time Status Updates</div>
-            <div className="fc-desc">Track your appointment status - Pending, Accepted, Rescheduled, or Declined - in real time.</div>
+            <div className="fc-desc">Track your visit request status - Pending, Accepted, Rescheduled, or Declined - in real time.</div>
           </div>
           <div className="feature-card">
             <div className="fc-icon" style={{ background: '#fce7f3' }}>
@@ -1156,14 +1150,14 @@ export default function HomePage() {
               <span className="icon" aria-hidden="true">{ICONS.phone}</span>
             </div>
             <div className="fc-title">Works on Any Device</div>
-            <div className="fc-desc">Fully responsive PWA. Book from your phone, tablet, or desktop - install it like a native app.</div>
+            <div className="fc-desc">Fully responsive PWA. Check in from your phone, tablet, or desktop - install it like a native app.</div>
           </div>
           <div className="feature-card">
             <div className="fc-icon" style={{ background: 'var(--surface2)' }}>
               <span className="icon" aria-hidden="true">{ICONS.monitor}</span>
             </div>
             <div className="fc-title">Receptionist Mode</div>
-            <div className="fc-desc">Receptionists can switch to an assisted booking mode to help walk-in visitors book quickly on their behalf.</div>
+            <div className="fc-desc">Receptionists can switch to an assisted check-in mode to help walk-in visitors notify their host quickly.</div>
           </div>
         </div>
       </section>
@@ -1172,7 +1166,7 @@ export default function HomePage() {
       <section className="section section-alt" id="departments">
         <div className="section-label">Directory</div>
         <div className="section-title">Our <em>Departments</em></div>
-        <div className="section-sub">Find the right person fast, then jump straight to booking.</div>
+        <div className="section-sub">Find the right person fast, then jump straight to check-in.</div>
 
         <div className="dept-search">
           <div className="dept-search-title">Find your person</div>
@@ -1345,7 +1339,7 @@ export default function HomePage() {
                               {member.description || member.bio || member.specialty || member.role || 'Ready to help with your request.'}
                             </div>
                             <button type="button" className="dept-book-btn" onClick={() => handleBookWithStaff(member)} disabled={!isMemberSelectable}>
-                              Book with {(member.full_name || member.first_name || 'Staff').split(' ')[0]} →
+                              Check in with {(member.full_name || member.first_name || 'Staff').split(' ')[0]} →
                             </button>
                           </div>
                           );
@@ -1366,7 +1360,7 @@ export default function HomePage() {
       <footer className="footer">
         <div>
           <div className="footer-brand">Gatepass</div>
-          <div style={{ fontSize: '12px', marginTop: '4px' }}>Smart Appointment Booking System</div>
+          <div style={{ fontSize: '12px', marginTop: '4px' }}>Visitor Management System</div>
         </div>
         <div className="footer-links">
           <a>Privacy Policy</a>
@@ -1384,7 +1378,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Booking Modal */}
+      {/* Visit Request Modal */}
       {showBookingModal && (
         <div className="booking-modal-overlay" onClick={() => setShowBookingModal(false)}>
           <div className="booking-modal" onClick={(e) => e.stopPropagation()}>
@@ -1399,12 +1393,12 @@ export default function HomePage() {
               {!showSuccess ? (
                 <>
                   <div className="form-panel-header">
-                    <div className="form-panel-title" style={{ color: '#ffffff' }}>Confirm an Appointment</div>
-                    <div className="form-panel-sub">Fill in each step below. Takes less than 2 minutes.</div>
+                    <div className="form-panel-title" style={{ color: '#ffffff' }}>Confirm visit request</div>
+                    <div className="form-panel-sub">Answer a few steps so reception can notify your host.</div>
                   </div>
                   {prefillSelection && (
                     <div className="prefill-banner">
-                      Booking with <strong>{prefillSelection.staffName}</strong> · {prefillSelection.departmentName}
+                      Visit request for <strong>{prefillSelection.staffName}</strong> · {prefillSelection.departmentName}
                       {prefillSelection.divisionName ? ` · ${prefillSelection.divisionName}` : ''}
                     </div>
                   )}
@@ -1440,7 +1434,7 @@ export default function HomePage() {
                         value={formData.visitor_name}
                         onChange={(e) => handleInputChange('visitor_name', e.target.value)}
                       />
-                      <div className="field-hint">Enter your full name as it appears on your ID</div>
+                      <div className="field-hint">Your name as you'd like to be announced</div>
                     </div>
                     <div className="field">
                       <label className="field-label">Phone Number <span className="field-required">*</span></label>
@@ -1470,17 +1464,17 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {/* Step 3: Department */}
+                  {/* Step 3: Host details */}
                   <div className={`step-view ${currentStep === 3 ? 'active' : ''}`} id="step3">
-                    <div className="step-label">Step 3 of 7 - Department</div>
+                    <div className="step-label">Step 3 of 7 - Host details</div>
                     <div className="field">
-                      <label className="field-label">Select Department <span className="field-required">*</span></label>
+                      <label className="field-label">Who are you here to see? <span className="field-required">*</span></label>
                       <select 
                         className="field-input field-select"
                         value={formData.department}
                         onChange={(e) => handleInputChange('department', e.target.value)}
                       >
-                        <option value="">Choose a department...</option>
+                        <option value="">Search by department or staff name</option>
                         {departments.map(dept => (
                           <option key={dept.id} value={dept.id}>{dept.name}</option>
                         ))}
@@ -1508,9 +1502,9 @@ export default function HomePage() {
 
                   {/* Step 5: Staff */}
                   <div className={`step-view ${currentStep === 5 ? 'active' : ''}`} id="step5">
-                    <div className="step-label">Step 5 of 7 - Select Staff Member</div>
-                    <div className="field">
-                      <label className="field-label">Select Staff Member <span className="field-required">*</span></label>
+                  <div className="step-label">Step 5 of 7 - Select your host</div>
+                  <div className="field">
+                    <label className="field-label">Select your host <span className="field-required">*</span></label>
                       <select 
                         className="field-input field-select"
                         value={formData.staff_member}
@@ -1533,16 +1527,16 @@ export default function HomePage() {
 
                   {/* Step 6: Date */}
                   <div className={`step-view ${currentStep === 6 ? 'active' : ''}`} id="step6">
-                    <div className="step-label">Step 6 of 7 - Preferred Date & Time</div>
+                    <div className="step-label">Step 6 of 7 - Expected arrival time</div>
                     <div className="field">
-                      <label className="field-label">Select Date & Time <span className="field-required">*</span></label>
+                      <label className="field-label">Expected arrival time <span className="field-required">*</span></label>
                       <input 
                         type="datetime-local" 
                         className={`field-input ${validation.dateValid ? 'valid' : ''} ${validation.dateError ? 'error' : ''}`}
                         value={formData.appointment_date}
                         onChange={(e) => handleInputChange('appointment_date', e.target.value)}
                       />
-                      <div className="field-hint">Select a date and time for your appointment</div>
+                      <div className="field-hint">Leave blank if you're already here</div>
                     </div>
                   </div>
 
@@ -1562,7 +1556,7 @@ export default function HomePage() {
 
                     {/* Summary */}
                     <div className="booking-summary">
-                      <div className="summary-title">Appointment Summary</div>
+                      <div className="summary-title">Visit summary</div>
                       <div className="summary-row"><span>Name:</span> <strong>{formData.visitor_name || '-'}</strong></div>
                       <div className="summary-row"><span>Email:</span> <strong>{formData.visitor_email || '-'}</strong></div>
                       <div className="summary-row"><span>Phone:</span> <strong>{formData.phone || '-'}</strong></div>
@@ -1608,7 +1602,7 @@ export default function HomePage() {
                         className="btn-primary"
                         onClick={submitBooking}
                       >
-                        Confirm Appointment
+                        Submit visit request
                       </button>
                     )}
                   </div>
@@ -1623,9 +1617,9 @@ export default function HomePage() {
                       </svg>
                     </div>
                   </div>
-                  <div className="success-title" style={{ color: '#ffffff' }}>Appointment Submitted!</div>
+                  <div className="success-title" style={{ color: '#ffffff' }}>Visit request submitted!</div>
                   <div className="success-desc">
-                    Your appointment request has been sent to <strong>{getStaffNameFromId(formData.staff_member)}</strong>
+                    Your visit request has been sent to <strong>{getStaffNameFromId(formData.staff_member)}</strong>
                   </div>
                   <div className="success-email">
                     A confirmation email has been sent to <br/><strong>{formData.visitor_email}</strong>
@@ -1676,7 +1670,7 @@ export default function HomePage() {
                         setPrefillSelection(null);
                       }}
                     >
-                      Submit Another Request
+                      Submit another visit request
                     </button>
                   </div>
                 </div>

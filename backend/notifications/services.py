@@ -26,12 +26,12 @@ def send_appointment_email(staff_email, visitor_name, appointment_date, message)
         logger.warning('send_appointment_email skipped: no staff_email provided')
         return {'sent': False, 'reason': 'missing_staff_email'}
 
-    subject = 'New Appointment Request'
+    subject = 'New visit request'
     body = (
         f'Visitor Name: {visitor_name}\n'
         f'Date: {appointment_date}\n'
         f'Message: {message or "No message provided."}\n\n'
-        'Please log in to your dashboard to approve or reject this appointment request.'
+        'Please log in to your dashboard to approve or reject this visit request.'
     )
 
     try:
@@ -43,7 +43,7 @@ def send_appointment_email(staff_email, visitor_name, appointment_date, message)
             fail_silently=False,
             connection=_build_email_connection(),
         )
-        logger.info(f'Appointment email sent successfully to {staff_email}')
+        logger.info(f'Visit request email sent successfully to {staff_email}')
         return {'sent': True}
     except Exception as e:
         logger.error(f'Failed to send email to {staff_email}: {str(e)}')
@@ -56,10 +56,10 @@ def send_appointment_response_email(visitor_email, visitor_name, status, respons
     if not visitor_email:
         return
 
-    subject = f'Update on Your Appointment Request ({status})'
+    subject = f'Update on Your Visit Request ({status})'
     body = (
         f'Hello {visitor_name},\n\n'
-        f'Your appointment request has been updated to: {status}\n'
+        f'Your visit request has been updated to: {status}\n'
         f'Date: {appointment_date}\n'
         f'Staff: {staff_name}\n\n'
         f'Staff response:\n{response_note}\n\n'

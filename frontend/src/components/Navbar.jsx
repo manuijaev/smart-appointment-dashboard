@@ -11,7 +11,7 @@ export default function Navbar() {
     <nav className={`top-nav ${mobileOpen ? 'is-open' : ''}`}>
       <div className="top-nav-inner">
         <NavLink to="/" className="brand">
-          Smart Appointments
+          Visitor Desk
         </NavLink>
         <button
           className="nav-hamburger"

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'appointment-pwa-v2';
+const CACHE_NAME = 'visitor-pwa-v2';
 const ASSETS = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
@@ -41,8 +41,8 @@ self.addEventListener('push', (event) => {
   }
 
   // Extract notification data from various possible formats
-  let title = 'New Appointment';
-  let body = 'You have a new notification';
+  let title = 'Visitor waiting';
+  let body = 'You have a visitor waiting for you';
   let icon = '/icons/icon-192.png';
   let clickPath = '/staff/dashboard';
   
@@ -69,7 +69,7 @@ self.addEventListener('push', (event) => {
     icon: icon,
     badge: '/icons/icon-192.png',
     vibrate: [200, 100, 200],
-    tag: 'appointment-notification',
+    tag: 'visitor-notification',
     renotify: true,
     requireInteraction: true,
     data: { clickPath },

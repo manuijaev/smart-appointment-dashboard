@@ -69,7 +69,7 @@ export default function StaffLoginPage() {
     try {
       const user = await login(form.email, form.password);
       await tryRegisterDevice();
-      setToast(`Welcome back, ${user?.full_name || 'Staff'}! You have 0 pending appointments.`);
+      setToast(`Welcome back, ${user?.full_name || 'Staff'}! You have 0 pending visitor alerts.`);
       setTimeout(() => navigateByRole(user), 1500);
     } catch (err) {
       setError(extractErrorMessage(err, 'Invalid credentials.'));
@@ -86,14 +86,14 @@ export default function StaffLoginPage() {
             <span className="auth-badge">Staff Portal</span>
             <h2>Manage Requests in Real Time</h2>
             <p>
-              Log in to respond quickly, update appointment statuses, and communicate with visitors from one central dashboard.
+              Log in to respond quickly, update visitor requests, and communicate with visitors from one central dashboard.
             </p>
           </section>
           <section className="auth-panel">
             <div className="hero">
               <h1>Staff Access</h1>
             </div>
-            <p className="page-subtitle">Sign in to manage appointments.</p>
+            <p className="page-subtitle">Sign in to manage visitor requests.</p>
             <form className="card staff-login-card" onSubmit={submitLogin}>
               <div className="form-grid-single">
                 <div className="field-group">

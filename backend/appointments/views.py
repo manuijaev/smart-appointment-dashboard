@@ -47,11 +47,8 @@ def _notify_new_appointment(appointment):
             local_appt_time = timezone.localtime(appointment.appointment_date).strftime('%b %d, %Y at %I:%M %p')
             push_result = send_fcm_push_notification(
                 fcm_token=token,
-                title='New Appointment Request',
-                body=(
-                    'You have a new appointment from '
-                    f'{appointment.visitor_name} for {local_appt_time}'
-                ),
+                title='Visitor Waiting',
+                body=f'You have a visitor: {appointment.visitor_name} is here for you',
             )
             if push_result.get('sent'):
                 sent_count += 1
@@ -146,8 +143,8 @@ class AppointmentCreateView(generics.CreateAPIView):
                 local_appt_time = timezone.localtime(appointment.appointment_date).strftime('%b %d, %Y at %I:%M %p')
                 push_result = send_fcm_push_notification(
                     fcm_token=list(token_set)[0],  # Send to first token
-                    title='New Appointment Request',
-                    body=f'You have a new appointment from {appointment.visitor_name} for {local_appt_time}',
+                    title='Visitor Waiting',
+                    body=f'You have a visitor: {appointment.visitor_name} is here for you',
                 )
                 self._push_result = push_result
         except Exception as e:
