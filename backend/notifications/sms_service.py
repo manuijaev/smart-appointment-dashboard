@@ -69,6 +69,7 @@ def send_visitor_sms(phone_number, visitor_name, staff_name, status, response_no
         return
     try:
         response = sms.send(message, [normalized])
+        print(f"SMS RESPONSE — {response}")
         logger.info("SMS sent: %s", response)
     except Exception as exc:
         logger.error("SMS failed: %s", exc)
