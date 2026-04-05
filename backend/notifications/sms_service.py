@@ -1,13 +1,19 @@
+import logging
 import os
 
 import africastalking
 
-africastalking.initialize(
-    username=os.getenv("AT_USERNAME"),
-    api_key=os.getenv("AT_API_KEY")
-)
+logger = logging.getLogger(__name__)
 
-sms = africastalking.SMS
+AT_USERNAME = os.getenv("AT_USERNAME")
+AT_API_KEY = os.getenv("AT_API_KEY")
+
+if AT_USERNAME and AT_API_KEY:
+    africastalking.initialize(username=AT_USERNAME, api_key=AT_API_KEY)
+    sms = africastalking.SMS
+else:
+    sms = None
+    logger.warning("Africa's Talking credentials not set; SMS notifications disabled.")
 
 
 def normalize_phone(number):
@@ -48,8 +54,11 @@ def send_visitor_sms(phone_number, visitor_name, staff_name, status, response_no
             f"has been updated to {status} by {staff_name}."
         )
 
+    if not sms:
+        logger.warning("Skip SMS: Africa's Talking is not configured.")
+        return
     try:
         response = sms.send(message, [normalized])
-        print("SMS sent:", response)
+        logger.info("SMS sent: %s", response)
     except Exception as exc:
-        print("SMS failed:", str(exc))
+        logger.error("SMS failed: %s", exc)
