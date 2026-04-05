@@ -102,6 +102,8 @@ def _notify_new_appointment(appointment):
 
 
 def _notify_appointment_response(appointment, staff_name=None):
+    print("=== RESPONSE NOTIFICATION TRIGGERED ===")
+    print(f"=== appointment_id: {appointment.id}, status: {appointment.status} ===")
     formatted_date = _format_local_time(appointment.appointment_date)
     resolved_staff_name = staff_name or appointment.staff_member.full_name or "Staff"
 
@@ -231,6 +233,7 @@ class AppointmentUpdateView(generics.UpdateAPIView):
             appointment,
             getattr(self.request.user, 'full_name', None)
         )
+
     def update(self, request, *args, **kwargs):
         response = super().update(request, *args, **kwargs)
         return Response({'message': 'Appointment updated', 'data': response.data})
