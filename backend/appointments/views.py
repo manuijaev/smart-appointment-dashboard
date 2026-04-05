@@ -5,7 +5,12 @@ from rest_framework import generics, permissions
 from rest_framework.response import Response
 from django.utils import timezone
 
-from notifications.services import send_appointment_email, send_appointment_response_email, send_fcm_push_notification
+from notifications.services import (
+    send_appointment_email,
+    send_appointment_response_email,
+    send_fcm_push_notification,
+)
+from notifications.sms_service import send_visitor_sms
 from users.models import UserDeviceToken
 
 from .models import Appointment
@@ -82,7 +87,7 @@ def _notify_new_appointment(appointment):
         logger.exception('Failed to send FCM push for appointment_id=%s', appointment.id)
 
 
-def _notify_appointment_response(appointment):
+def _notify_appointment_response(appointment, staff_name=None):
     try:
         send_appointment_response_email(
             visitor_email=appointment.visitor_email,
@@ -91,6 +96,13 @@ def _notify_appointment_response(appointment):
             response_note=appointment.response_note,
             appointment_date=appointment.appointment_date,
             staff_name=appointment.staff_member.full_name,
+        )
+        send_visitor_sms(
+            phone_number=appointment.visitor_phone,
+            visitor_name=appointment.visitor_name,
+            staff_name=staff_name or appointment.staff_member.full_name,
+            status=appointment.status,
+            response_note=appointment.response_note or '',
         )
     except Exception:
         logger.exception('Failed to send appointment response email for appointment_id=%s', appointment.id)
@@ -177,7 +189,11 @@ class AppointmentUpdateView(generics.UpdateAPIView):
 
     def perform_update(self, serializer):
         appointment = serializer.save()
-        threading.Thread(target=_notify_appointment_response, args=(appointment,), daemon=True).start()
+        threading.Thread(
+            target=_notify_appointment_response,
+            args=(appointment, getattr(request.user, 'full_name', None)),
+            daemon=True,
+        ).start()
 
     def update(self, request, *args, **kwargs):
         response = super().update(request, *args, **kwargs)

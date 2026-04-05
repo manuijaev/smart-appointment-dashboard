@@ -25,6 +25,7 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
             'id',
             'visitor_name',
             'visitor_email',
+            'visitor_phone',
             'department',
             'division',
             'staff_member',
@@ -48,6 +49,7 @@ class AppointmentListSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'visitor_name',
+            'visitor_phone',
             'visitor_email',
             'department',
             'department_name',

@@ -331,7 +331,7 @@ export default function HomePage() {
       const payload = {
         visitor_name: formData.visitor_name,
         visitor_email: formData.visitor_email,
-        phone: formData.phone || '',
+        visitor_phone: formData.phone || '',
         department: formData.department,
         division: formData.division,
         staff_member: formData.staff_member,
