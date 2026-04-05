@@ -218,7 +218,7 @@ class AppointmentUpdateView(generics.UpdateAPIView):
         appointment = serializer.save()
         threading.Thread(
             target=_notify_appointment_response,
-            args=(appointment, getattr(request.user, 'full_name', None)),
+            args=(appointment, getattr(self.request.user, 'full_name', None)),
             daemon=True,
         ).start()
 
