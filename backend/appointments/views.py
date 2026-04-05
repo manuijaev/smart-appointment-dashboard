@@ -5,10 +5,11 @@ from rest_framework import generics, permissions
 from rest_framework.response import Response
 from django.utils import timezone
 
-from notifications.services import (
-    send_appointment_email,
-    send_appointment_response_email,
-    send_fcm_push_notification,
+from notifications.services import send_fcm_push_notification
+from notifications.emailjs_service import (
+    REQUEST_TEMPLATE_ID,
+    RESPONSE_TEMPLATE_ID,
+    send_emailjs,
 )
 from notifications.sms_service import send_visitor_sms
 from users.models import UserDeviceToken
@@ -19,19 +20,32 @@ from .serializers import AppointmentCreateSerializer, AppointmentListSerializer,
 logger = logging.getLogger(__name__)
 
 
+def _format_local_time(dt):
+    return timezone.localtime(dt).strftime("%b %d, %Y at %I:%M %p")
+
+
 def _notify_new_appointment(appointment):
     logger.info(f'Starting notification for appointment_id={appointment.id}, staff_member={appointment.staff_member}')
     
     try:
         staff_email = appointment.staff_member.email
         logger.info(f'Sending email to staff: {staff_email}')
-        send_appointment_email(
-            staff_email=staff_email,
-            visitor_name=appointment.visitor_name,
-            appointment_date=appointment.appointment_date,
-            message=appointment.message,
+        formatted_date = _format_local_time(appointment.appointment_date)
+        send_emailjs(
+            REQUEST_TEMPLATE_ID,
+            {
+                "to_email": staff_email,
+                "to_name": appointment.staff_member.full_name or appointment.staff_member.first_name or "Staff",
+                "visitor_name": appointment.visitor_name,
+                "visitor_email": appointment.visitor_email,
+                "department_name": appointment.department.name if appointment.department else "",
+                "division_name": appointment.division.name if appointment.division else "",
+                "appointment_date": formatted_date,
+                "message": appointment.message or "",
+                "staff_name": appointment.staff_member.full_name or appointment.staff_member.first_name or "Staff",
+            },
         )
-        logger.info(f'Email sent successfully to {staff_email}')
+        logger.info(f'EmailJS request email queued for staff {staff_email}')
     except Exception as e:
         logger.exception('Failed to send appointment request email for appointment_id=%s: %s', appointment.id, str(e))
 
@@ -89,13 +103,17 @@ def _notify_new_appointment(appointment):
 
 def _notify_appointment_response(appointment, staff_name=None):
     try:
-        send_appointment_response_email(
-            visitor_email=appointment.visitor_email,
-            visitor_name=appointment.visitor_name,
-            status=appointment.status,
-            response_note=appointment.response_note,
-            appointment_date=appointment.appointment_date,
-            staff_name=appointment.staff_member.full_name,
+        formatted_date = _format_local_time(appointment.appointment_date)
+        send_emailjs(
+            RESPONSE_TEMPLATE_ID,
+            {
+                "visitor_name": appointment.visitor_name,
+                "visitor_email": appointment.visitor_email,
+                "status": appointment.status,
+                "response_note": appointment.response_note or "",
+                "appointment_date": formatted_date,
+                "staff_name": staff_name or appointment.staff_member.full_name or "Staff",
+            },
         )
         send_visitor_sms(
             phone_number=appointment.visitor_phone,
@@ -105,7 +123,7 @@ def _notify_appointment_response(appointment, staff_name=None):
             response_note=appointment.response_note or '',
         )
     except Exception:
-        logger.exception('Failed to send appointment response email for appointment_id=%s', appointment.id)
+        logger.exception('Failed to send appointment response notifications for appointment_id=%s', appointment.id)
 
 
 class AppointmentCreateView(generics.CreateAPIView):
@@ -132,13 +150,22 @@ class AppointmentCreateView(generics.CreateAPIView):
         # Send email immediately (synchronously)
         try:
             staff_email = appointment.staff_member.email
-            local_appt_time = timezone.localtime(appointment.appointment_date).strftime('%B %d, %Y at %I:%M %p')
-            self._email_result = send_appointment_email(
-                staff_email=staff_email,
-                visitor_name=appointment.visitor_name,
-                appointment_date=local_appt_time,
-                message=appointment.message,
+            formatted_date = _format_local_time(appointment.appointment_date)
+            success = send_emailjs(
+                REQUEST_TEMPLATE_ID,
+                {
+                    "to_email": staff_email,
+                    "to_name": appointment.staff_member.full_name or appointment.staff_member.first_name or "Staff",
+                    "visitor_name": appointment.visitor_name,
+                    "visitor_email": appointment.visitor_email,
+                    "department_name": appointment.department.name if appointment.department else "",
+                    "division_name": appointment.division.name if appointment.division else "",
+                    "appointment_date": formatted_date,
+                    "message": appointment.message or "",
+                    "staff_name": appointment.staff_member.full_name or appointment.staff_member.first_name or "Staff",
+                },
             )
+            self._email_result = {'sent': success, 'reason': 'sent' if success else 'failed'}
         except Exception as e:
             logger.exception('Failed to send appointment email: %s', str(e))
             self._email_result = {'sent': False, 'reason': str(e)[:100]}
