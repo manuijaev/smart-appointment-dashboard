@@ -102,8 +102,10 @@ def _notify_new_appointment(appointment):
 
 
 def _notify_appointment_response(appointment, staff_name=None):
+    formatted_date = _format_local_time(appointment.appointment_date)
+    resolved_staff_name = staff_name or appointment.staff_member.full_name or "Staff"
+
     try:
-        formatted_date = _format_local_time(appointment.appointment_date)
         send_emailjs(
             RESPONSE_TEMPLATE_ID,
             {
@@ -112,18 +114,27 @@ def _notify_appointment_response(appointment, staff_name=None):
                 "status": appointment.status,
                 "response_note": appointment.response_note or "",
                 "appointment_date": formatted_date,
-                "staff_name": staff_name or appointment.staff_member.full_name or "Staff",
+                "staff_name": resolved_staff_name,
             },
         )
+        logger.info("Response email sent for appointment_id=%s", appointment.id)
+    except Exception:
+        logger.exception("Failed to send response email for appointment_id=%s", appointment.id)
+
+    try:
+        print(f"SMS ATTEMPT — phone: {appointment.visitor_phone}, visitor: {appointment.visitor_name}, status: {appointment.status}")
+        if not appointment.visitor_phone:
+            print("SMS SKIPPED — visitor_phone is empty on this appointment")
         send_visitor_sms(
             phone_number=appointment.visitor_phone,
             visitor_name=appointment.visitor_name,
-            staff_name=staff_name or appointment.staff_member.full_name,
+            staff_name=resolved_staff_name,
             status=appointment.status,
             response_note=appointment.response_note or '',
         )
+        logger.info("SMS dispatched for appointment_id=%s", appointment.id)
     except Exception:
-        logger.exception('Failed to send appointment response notifications for appointment_id=%s', appointment.id)
+        logger.exception("Failed to send SMS for appointment_id=%s", appointment.id)
 
 
 class AppointmentCreateView(generics.CreateAPIView):

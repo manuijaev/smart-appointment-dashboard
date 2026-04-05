@@ -8,11 +8,16 @@ logger = logging.getLogger(__name__)
 AT_USERNAME = os.getenv("AT_USERNAME")
 AT_API_KEY = os.getenv("AT_API_KEY")
 
+print(f"SMS SERVICE INIT — AT_USERNAME: {AT_USERNAME}")
+print(f"SMS SERVICE INIT — AT_API_KEY present: {bool(AT_API_KEY)}")
+
 if AT_USERNAME and AT_API_KEY:
     africastalking.initialize(username=AT_USERNAME, api_key=AT_API_KEY)
     sms = africastalking.SMS
+    print("SMS SERVICE — Africa's Talking initialized successfully")
 else:
     sms = None
+    print("SMS SERVICE — Africa's Talking NOT initialized, credentials missing")
     logger.warning("Africa's Talking credentials not set; SMS notifications disabled.")
 
 
@@ -28,8 +33,12 @@ def normalize_phone(number):
 
 
 def send_visitor_sms(phone_number, visitor_name, staff_name, status, response_note):
+    print(f"SMS CALLED — phone: {phone_number}, visitor: {visitor_name}, status: {status}")
     normalized = normalize_phone(phone_number)
+    print(f"SMS NORMALIZED — {normalized}")
+
     if not normalized:
+        print("SMS ABORTED — phone number is empty or invalid")
         return
 
     if status == "Accepted":
@@ -55,6 +64,7 @@ def send_visitor_sms(phone_number, visitor_name, staff_name, status, response_no
         )
 
     if not sms:
+        print("SMS ABORTED — Africa's Talking not configured")
         logger.warning("Skip SMS: Africa's Talking is not configured.")
         return
     try:
