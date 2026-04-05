@@ -157,6 +157,11 @@ class AppointmentCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         appointment = serializer.save()
         # Send email and push synchronously to ensure delivery
+        logger.info(
+            "AppointmentCreateView.perform_create saved visitor_phone=%s appointment_id=%s",
+            appointment.visitor_phone,
+            appointment.id,
+        )
         self._email_result = {'sent': False, 'reason': 'unknown'}
         self._push_result = {'sent': False, 'reason': 'unknown'}
         
@@ -237,6 +242,12 @@ class AppointmentUpdateView(generics.UpdateAPIView):
         )
 
     def update(self, request, *args, **kwargs):
+        logger.info(
+            "AppointmentUpdateView.update called staff=%s appointment_id=%s data=%s",
+            request.user.id if request.user.is_authenticated else None,
+            kwargs.get('id'),
+            request.data,
+        )
         response = super().update(request, *args, **kwargs)
         return Response({
             'message': 'Appointment updated',
