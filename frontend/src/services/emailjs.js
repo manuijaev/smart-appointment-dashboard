@@ -37,8 +37,7 @@ async function sendViaEmailJs(templateId, params) {
 
 const formatForNairobi = (dt) => {
   if (!dt) return '';
-  const normalized = dt.endsWith('Z') ? dt : `${dt}Z`;
-  return new Date(normalized).toLocaleString('en-KE', {
+  return new Date(dt).toLocaleString('en-KE', {
     year: 'numeric',
     month: 'short',
     day: '2-digit',
