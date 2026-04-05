@@ -229,6 +229,8 @@ class AppointmentUpdateView(generics.UpdateAPIView):
 
     def perform_update(self, serializer):
         appointment = serializer.save()
+        print("=== PERFORM UPDATE CALLED ===")
+        print(f"=== phone: {appointment.visitor_phone}, status: {appointment.status} ===")
         _notify_appointment_response(
             appointment,
             getattr(self.request.user, 'full_name', None)
@@ -236,7 +238,10 @@ class AppointmentUpdateView(generics.UpdateAPIView):
 
     def update(self, request, *args, **kwargs):
         response = super().update(request, *args, **kwargs)
-        return Response({'message': 'Appointment updated', 'data': response.data})
+        return Response({
+            'message': 'Appointment updated',
+            'data': response.data
+        })
 
 
 class AppointmentDeleteView(generics.DestroyAPIView):
