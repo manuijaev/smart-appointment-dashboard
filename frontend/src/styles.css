@@ -8528,11 +8528,6 @@ tr:hover .row-actions {
   background: var(--red);
 }
 
-.sd-sidebar-footer {
-  padding: 16px;
-  border-top: 1px solid var(--border);
-}
-
 .sd-logout-btn {
   width: 100%;
   display: flex;
@@ -8565,6 +8560,12 @@ tr:hover .row-actions {
 .sd-logout-btn svg {
   width: 18px;
   height: 18px;
+}
+
+.sd-sidebar-logout {
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
 }
 
 /* Main Content */
@@ -8795,80 +8796,6 @@ tr:hover .row-actions {
   font-weight: 600;
   font-size: 12px;
   cursor: pointer;
-}
-
-.sd-profile {
-  position: relative;
-}
-
-.sd-profile-btn {
-  border: none;
-  background: transparent;
-  padding: 0;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: transform 0.2s ease;
-}
-
-.sd-profile-btn:focus-visible {
-  outline: 2px solid var(--teal);
-  outline-offset: 2px;
-}
-
-.sd-profile-dropdown {
-  position: absolute;
-  right: 0;
-  top: 48px;
-  min-width: 190px;
-  background: var(--surface);
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-lg);
-  padding: 6px 0;
-  z-index: 60;
-  animation: sdProfileDropdown 0.22s ease-out;
-}
-
-.sd-profile-dropdown-item {
-  width: 100%;
-  border: none;
-  background: transparent;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 18px;
-  font-size: 14px;
-  color: var(--ink);
-  text-align: left;
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
-}
-
-.sd-profile-dropdown-item:hover,
-.sd-profile-dropdown-item:focus-visible {
-  background: var(--surface2);
-}
-
-.sd-profile-dropdown-icon {
-  width: 18px;
-  height: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-@keyframes sdProfileDropdown {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 /* Content Area */

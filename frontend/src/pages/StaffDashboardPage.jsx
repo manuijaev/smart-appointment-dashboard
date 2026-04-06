@@ -181,7 +181,6 @@ export default function StaffDashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dateFilter, setDateFilter] = useState('all');
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [isCurrentlyAvailable, setIsCurrentlyAvailable] = useState(user?.is_available ?? true);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [overdueDismissedKey, setOverdueDismissedKey] = useState('');
@@ -250,7 +249,6 @@ export default function StaffDashboardPage() {
   
   const longPressTimerRef = useRef(null);
   const notificationRef = useRef(null);
-  const profileRef = useRef(null);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -299,22 +297,6 @@ export default function StaffDashboardPage() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [notificationsOpen]);
-
-  useEffect(() => {
-    const handleClickOutsideProfile = (event) => {
-      if (profileRef.current && !profileRef.current.contains(event.target)) {
-        setProfileMenuOpen(false);
-      }
-    };
-
-    if (profileMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutsideProfile);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutsideProfile);
-    };
-  }, [profileMenuOpen]);
 
   const getInitials = (name) => {
     if (!name) return '??';
@@ -749,7 +731,7 @@ export default function StaffDashboardPage() {
           </button>
         </nav>
 
-        <div className="sd-sidebar-footer">
+        <div className="sd-sidebar-logout">
           <button className="sd-logout-btn" onClick={handleLogout}>
             {ICONS.logout}<span>Sign Out</span>
           </button>
@@ -847,33 +829,7 @@ export default function StaffDashboardPage() {
               )}
             </div>
             <button className="sd-icon-btn" onClick={() => loadMyAppointments().then(() => showToast('Refreshed!'))}>{ICONS.refresh}</button>
-            <div className="sd-profile" ref={profileRef}>
-              <button
-                type="button"
-                className="sd-profile-btn"
-                onClick={() => setProfileMenuOpen((prev) => !prev)}
-                aria-haspopup="true"
-                aria-expanded={profileMenuOpen}
-              >
-                <span className="sd-avatar">{getInitials(user?.full_name)}</span>
-              </button>
-              {profileMenuOpen && (
-                <div className="sd-profile-dropdown" role="menu">
-                  <button
-                    type="button"
-                    className="sd-profile-dropdown-item"
-                    role="menuitem"
-                    onClick={() => {
-                      setProfileMenuOpen(false);
-                      handleLogout();
-                    }}
-                  >
-                    <span className="sd-profile-dropdown-icon">{ICONS.logout}</span>
-                    <span>Log out</span>
-                  </button>
-                </div>
-              )}
-            </div>
+            <div className="sd-avatar">{getInitials(user?.full_name)}</div>
           </div>
         </header>
 
