@@ -455,6 +455,13 @@ export default function StaffDashboardPage() {
     setPendingStatusUpdate({ appointmentId, visitorName, status });
   };
 
+  const handlePreviewResponse = (status) => {
+    if (!previewItem) return;
+    setResponseAction((prev) => ({ ...prev, [previewItem.id]: status }));
+    closePreview();
+    requestStatusUpdate(previewItem.id, previewItem.visitor_name, status);
+  };
+
   const confirmStatusUpdate = async () => {
     if (!pendingStatusUpdate) return;
     const { appointmentId, status } = pendingStatusUpdate;
@@ -1246,13 +1253,25 @@ export default function StaffDashboardPage() {
                   <p>{previewItem.response_note}</p>
                 </div>
               )}
+
+              <div className="sd-modal-section">
+                <h5>Response note (optional)</h5>
+                <textarea
+                  className="sd-modal-response-input"
+                  placeholder="Write a short note for the visitor..."
+                  value={responseNote[previewItem.id] || ''}
+                  onChange={(e) => setResponseNote((prev) => ({ ...prev, [previewItem.id]: e.target.value }))}
+                  rows="3"
+                />
+              </div>
             </div>
             <div className="sd-modal-footer">
               <button type="button" className="sd-btn sd-btn-view" onClick={closePreview}>Return</button>
               {previewItem.status === 'Pending' && (
                 <>
-                  <button className="sd-btn sd-btn-accept" onClick={() => { closePreview(); openResponseArea(previewItem.id, 'Accepted'); }}>Accept</button>
-                  <button className="sd-btn sd-btn-decline" onClick={() => { closePreview(); openResponseArea(previewItem.id, 'Declined'); }}>Decline</button>
+                  <button className="sd-btn sd-btn-accept" onClick={() => handlePreviewResponse('Accepted')}>Accept</button>
+                  <button className="sd-btn sd-btn-reschedule" onClick={() => handlePreviewResponse('Rescheduled')}>Reschedule</button>
+                  <button className="sd-btn sd-btn-decline" onClick={() => handlePreviewResponse('Declined')}>Decline</button>
                 </>
               )}
             </div>

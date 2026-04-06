@@ -9711,6 +9711,18 @@ tr:hover .row-actions {
   letter-spacing: 0.5px;
 }
 
+.sd-modal-response-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 72px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
 .sd-modal-section p {
   font-size: 14px;
   color: var(--ink);
