@@ -209,20 +209,14 @@ class AppointmentCreateView(generics.CreateAPIView):
             self._push_result = {'sent': False, 'reason': str(e)[:100]}
 
         try:
-            staff_phone = appointment.staff_member.phone_number
+            staff_phone = appointment.staff_member.phone
             if staff_phone:
-                department_name = appointment.department.name if appointment.department else ''
-                division_name = appointment.division.name if appointment.division else ''
                 send_staff_sms(
                     phone_number=staff_phone,
                     staff_name=appointment.staff_member.full_name or appointment.staff_member.email,
                     visitor_name=appointment.visitor_name,
-                    appointment_date=formatted_date,
-                    department_name=department_name,
-                    division_name=division_name,
-                    visitor_phone=appointment.visitor_phone,
                     visitor_email=appointment.visitor_email,
-                    visitor_message=appointment.message or '',
+                    purpose=appointment.message or 'Not specified',
                 )
         except Exception:
             logger.exception('Failed to send staff SMS for appointment_id=%s', appointment.id)

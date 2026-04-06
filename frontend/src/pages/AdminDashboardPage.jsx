@@ -240,7 +240,7 @@ export default function AdminDashboardPage() {
     department: '',
     division: '',
     password: generatePassword(),
-    phone_number: '',
+    phone: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoadingStaff, setIsLoadingStaff] = useState(false);
@@ -367,7 +367,7 @@ export default function AdminDashboardPage() {
       department: '',
       division: '',
       password: generatePassword(),
-      phone_number: '',
+      phone: '',
     });
     setShowPassword(false);
     setShowStaffModal(true);
@@ -382,7 +382,7 @@ export default function AdminDashboardPage() {
       department: String(s.department || ''),
       division: String(s.division || ''),
       password: '',
-      phone_number: s.phone_number || '',
+      phone: s.phone || '',
     });
     setShowStaffModal(true);
   };
@@ -401,7 +401,7 @@ export default function AdminDashboardPage() {
           role: staffForm.role,
           department: staffForm.department || null,
           division: staffForm.division || null,
-          phone_number: staffForm.phone_number || '',
+          phone: staffForm.phone || '',
         };
         const newPassword = staffForm.password?.trim();
         if (newPassword) {
@@ -417,7 +417,7 @@ export default function AdminDashboardPage() {
           department: staffForm.department,
           division: staffForm.division,
           password: staffForm.password,
-          phone_number: staffForm.phone_number,
+          phone: staffForm.phone,
         });
         showToast(`Account created. Temp password: ${response.data.temp_password}`);
       }
@@ -1551,10 +1551,10 @@ export default function AdminDashboardPage() {
                     className="field-input"
                     placeholder="+254700000000"
                     type="tel"
-                    value={staffForm.phone_number}
-                    onChange={(e) => setStaffForm(f => ({ ...f, phone_number: e.target.value }))}
+                    value={staffForm.phone}
+                    onChange={(e) => setStaffForm(f => ({ ...f, phone: e.target.value }))}
                   />
-                  <div className="field-hint">Optional - include country code so Africa's Talking can deliver SMS.</div>
+                  <div className="field-hint">Optional - include the country code so UMSComms can deliver SMS.</div>
                 </div>
                 <div className="field">
                   <label className="field-label">Role *</label>
@@ -1661,12 +1661,12 @@ export default function AdminDashboardPage() {
                 <label className="field-label">Phone Number</label>
                 <input
                   className="field-input"
-                  value={staffForm.phone_number}
-                  onChange={(e) => setStaffForm(f => ({ ...f, phone_number: e.target.value }))}
+                  value={staffForm.phone}
+                  onChange={(e) => setStaffForm(f => ({ ...f, phone: e.target.value }))}
                   placeholder="+254700000000"
                   type="tel"
                 />
-                <div className="field-hint">Optional - include country code so Africa's Talking can deliver SMS.</div>
+                <div className="field-hint">Optional - include the country code so UMSComms can deliver SMS.</div>
               </div>
               <div className="field">
                 <label className="field-label">Role *</label>
