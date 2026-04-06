@@ -40,10 +40,11 @@ def normalize_phone(number):
 def _dispatch_sms(normalized_number, message_body, context='visitor'):
     if not normalized_number:
         print(f"SMS ABORTED — invalid {context} phone number")
+        logger.warning("SMS aborted — missing normalized %s phone number", context)
         return False
     if not sms:
         print("SMS ABORTED — Africa's Talking not configured")
-        logger.warning("Skip SMS: Africa's Talking is not configured.")
+        logger.warning("Skip %s SMS: Africa's Talking is not configured.", context.capitalize())
         return False
     try:
         response = sms.send(message_body, [normalized_number])
@@ -106,6 +107,7 @@ def send_staff_sms(
     print(f"Staff SMS NORMALIZED — {normalized}")
     if not normalized:
         print("Staff SMS ABORTED — phone number is empty or invalid")
+        logger.info("Staff SMS skipped — invalid phone for %s", staff_name or "staff member")
         return False
 
     staff_title = staff_name or "Staff"

@@ -39,6 +39,7 @@ class StaffRegisterSerializer(serializers.ModelSerializer):
 class StaffManageSerializer(serializers.ModelSerializer):
     department_name = serializers.CharField(source='department.name', read_only=True)
     division_name = serializers.CharField(source='division.name', read_only=True)
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = User
@@ -53,8 +54,9 @@ class StaffManageSerializer(serializers.ModelSerializer):
             'division_name',
             'role',
             'is_active',
+            'password',
         ]
-        read_only_fields = ['id', 'email']
+        read_only_fields = ['id']
 
     def validate(self, attrs):
         department = attrs.get('department', getattr(self.instance, 'department', None))
@@ -62,6 +64,19 @@ class StaffManageSerializer(serializers.ModelSerializer):
         if department and division and division.department_id != department.id:
             raise serializers.ValidationError({'division': 'Selected division does not belong to this department.'})
         return attrs
+
+    def validate_password(self, value):
+        if value and len(value) < 8:
+            raise serializers.ValidationError('Password must be at least 8 characters.')
+        return value
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        user = super().update(instance, validated_data)
+        if password:
+            user.set_password(password)
+            user.save(update_fields=['password'])
+        return user
 
 
 class StaffCreateSerializer(serializers.ModelSerializer):

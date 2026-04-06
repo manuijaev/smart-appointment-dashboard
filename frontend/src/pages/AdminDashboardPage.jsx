@@ -130,7 +130,26 @@ export default function AdminDashboardPage() {
   const [notifSearch, setNotifSearch] = useState('');
   const [alertDismissed, setAlertDismissed] = useState(false);
   const [lastNotifUpdate, setLastNotifUpdate] = useState(new Date());
-  
+  const [staffToast, setStaffToast] = useState(null);
+
+  const showToast = useCallback((msg, type = 'success') => {
+    setStaffToast({ msg, type });
+    setTimeout(() => setStaffToast(null), 3000);
+  }, []);
+
+  const handleAuthError = useCallback(
+    (error) => {
+      if (error?.response?.status === 401) {
+        showToast('Session expired. Please log in again.', 'error');
+        logout();
+        navigate('/staff/login');
+        return true;
+      }
+      return false;
+    },
+    [logout, navigate, showToast]
+  );
+
   const unreadCount = notifications.filter(n => n.unread).length;
   const urgentCount = notifications.filter(n => n.urgent).length;
   const todayCount = notifications.filter(n => n.date === 'Today').length;
@@ -224,7 +243,6 @@ export default function AdminDashboardPage() {
     phone_number: '',
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [staffToast, setStaffToast] = useState(null);
   const [isLoadingStaff, setIsLoadingStaff] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [staffSearch, setStaffSearch] = useState('');
@@ -245,28 +263,43 @@ export default function AdminDashboardPage() {
   const [editingDivDept, setEditingDivDept] = useState('');
 
   const loadData = useCallback(async () => {
-    const [depRes, divRes, staffRes, apptRes] = await Promise.all([
-      api.get('/departments/'),
-      api.get('/divisions/'),
-      api.get('/staff/?include_inactive=1'),
-      api.get('/appointments/my/'),
-    ]);
-    setDepartments(depRes.data);
-    setDivisions(divRes.data);
-    setStaff(staffRes.data);
-    setAllAppointments(apptRes.data);
-  }, []);
+    try {
+      const [depRes, divRes, staffRes, apptRes] = await Promise.all([
+        api.get('/departments/'),
+        api.get('/divisions/'),
+        api.get('/staff/?include_inactive=1'),
+        api.get('/appointments/my/'),
+      ]);
+      setDepartments(depRes.data);
+      setDivisions(divRes.data);
+      setStaff(staffRes.data);
+      setAllAppointments(apptRes.data);
+    } catch (error) {
+      if (handleAuthError(error)) return;
+      throw error;
+    }
+  }, [handleAuthError]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (!user) return;
+    loadData().catch((err) => {
+      if (!handleAuthError(err)) {
+        showToast('Failed to load data.', 'error');
+      }
+    });
+  }, [loadData, user, handleAuthError, showToast]);
 
   useEffect(() => {
+    if (!user) return;
     const intervalId = setInterval(() => {
-      loadData().catch(() => {});
+      loadData().catch((err) => {
+        if (!handleAuthError(err)) {
+          showToast('Failed to refresh data.', 'error');
+        }
+      });
     }, 15000);
     return () => clearInterval(intervalId);
-  }, [loadData]);
+  }, [loadData, user, handleAuthError, showToast]);
 
   useEffect(() => {
     setLastNotifUpdate(new Date());
@@ -278,11 +311,6 @@ export default function AdminDashboardPage() {
       document.body.classList.remove('admin-background');
     };
   }, []);
-
-  const showToast = (msg, type = 'success') => {
-    setStaffToast({ msg, type });
-    setTimeout(() => setStaffToast(null), 3000);
-  };
 
   // Department functions
   const createDepartment = async (e) => {
@@ -367,13 +395,19 @@ export default function AdminDashboardPage() {
     setIsLoadingStaff(true);
     try {
       if (editingStaffId) {
-        await api.patch(`/staff/${editingStaffId}/`, {
+        const payload = {
           full_name: staffForm.full_name,
+          email: staffForm.email,
           role: staffForm.role,
           department: staffForm.department || null,
           division: staffForm.division || null,
           phone_number: staffForm.phone_number || '',
-        });
+        };
+        const newPassword = staffForm.password?.trim();
+        if (newPassword) {
+          payload.password = newPassword;
+        }
+        await api.patch(`/staff/${editingStaffId}/`, payload);
         showToast('Staff member updated.');
       } else {
         const response = await api.post('/staff/create/', {
@@ -1621,7 +1655,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className="field">
                 <label className="field-label">Email Address *</label>
-                <input className="field-input" value={staffForm.email} onChange={(e) => setStaffForm(f => ({ ...f, email: e.target.value }))} placeholder="jane@org.com" type="email" disabled={!!editingStaffId} />
+                <input className="field-input" value={staffForm.email} onChange={(e) => setStaffForm(f => ({ ...f, email: e.target.value }))} placeholder="jane@org.com" type="email" />
               </div>
               <div className="field">
                 <label className="field-label">Phone Number</label>
@@ -1655,49 +1689,53 @@ export default function AdminDashboardPage() {
                   {divisions.filter(d => String(d.department) === String(staffForm.department)).map((d) => (<option key={d.id} value={d.id}>{d.name}</option>))}
                 </select>
               </div>
-              {!editingStaffId && (
-                <div className="field">
-                  <label className="field-label">Temporary Password</label>
-                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                    <input 
-                      className="field-input" 
-                      style={{ flex: 1, minWidth: '200px', fontFamily: 'monospace', letterSpacing: '0.1em' }} 
-                      value={staffForm.password} 
-                      onChange={(e) => setStaffForm(f => ({ ...f, password: e.target.value }))} 
-                      type={showPassword ? 'text' : 'password'} 
-                    />
-                    <button 
-                      className="btn btn-ghost" 
-                      style={{ padding: '8px', minWidth: '36px' }} 
-                      onClick={() => setShowPassword(!showPassword)}
-                      title={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showPassword ? (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                          <line x1="1" y1="1" x2="23" y2="23"></line>
-                        </svg>
-                      ) : (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                          <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                      )}
-                    </button>
-                    <button 
-                      className="btn btn-ghost" 
-                      style={{ padding: '8px', minWidth: '36px' }} 
-                      onClick={() => setStaffForm(f => ({ ...f, password: generatePassword() }))}
-                      title="Generate new password"
-                    >
+              <div className="field" style={{ gridColumn: 'span 2' }}>
+                <label className="field-label">{editingStaffId ? 'New Password' : 'Temporary Password'}</label>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <input 
+                    className="field-input" 
+                    style={{ flex: 1, minWidth: '200px', fontFamily: 'monospace', letterSpacing: '0.1em' }} 
+                    value={staffForm.password} 
+                    onChange={(e) => setStaffForm(f => ({ ...f, password: e.target.value }))}
+                    type={showPassword ? 'text' : 'password'} 
+                    placeholder={editingStaffId ? 'Leave blank to keep current password' : undefined}
+                  />
+                  <button 
+                    className="btn btn-ghost" 
+                    style={{ padding: '8px', minWidth: '36px' }} 
+                    onClick={() => setShowPassword(!showPassword)}
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? (
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polyline points="23 4 23 10 17 10"></polyline>
-                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                        <line x1="1" y1="1" x2="23" y2="23"></line>
                       </svg>
-                    </button>
-                  </div>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                      </svg>
+                    )}
+                  </button>
+                  <button 
+                    className="btn btn-ghost" 
+                    style={{ padding: '8px', minWidth: '36px' }} 
+                    onClick={() => setStaffForm(f => ({ ...f, password: generatePassword() }))}
+                    title="Generate new password"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="23 4 23 10 17 10"></polyline>
+                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                    </svg>
+                  </button>
                 </div>
-              )}
+                <div className="field-hint">
+                  {editingStaffId 
+                    ? 'Leave blank to retain the current password for this staff member.' 
+                    : 'A welcome email with credentials will be sent to the staff member.'}
+                </div>
+              </div>
             </div>
 
             <div className="modal-actions">
