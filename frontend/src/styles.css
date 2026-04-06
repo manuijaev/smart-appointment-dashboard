@@ -8420,10 +8420,14 @@ tr:hover .row-actions {
   background: var(--teal);
   color: white;
   font-size: 10px;
-  padding: 1px 4px;
-  border-radius: 999px;
   font-weight: 600;
-  min-width: 24px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
   text-align: center;
   line-height: 1.2;
 }
