@@ -8340,23 +8340,28 @@ tr:hover .row-actions {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
+  padding: 14px 16px;
   border: none;
   background: transparent;
   border-radius: 10px;
   color: var(--ink-mid);
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: padding 0.35s ease, transform 0.35s ease, color 0.35s ease, background 0.35s ease, box-shadow 0.35s ease;
 }
 
 .sd-nav-item:hover {
   background: var(--surface2);
+  padding-left: 20px;
+  transform: translateX(2px);
+  box-shadow: var(--shadow-sm);
 }
 
 .sd-nav-item.active {
   background: var(--gold-light);
   color: var(--gold-dark);
+  padding: 14px 18px;
+  box-shadow: 0 12px 24px rgba(201, 146, 42, 0.18);
 }
 
 .sd-nav-item svg {
