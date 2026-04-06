@@ -48,6 +48,13 @@ const ICONS = {
       <path d="M10 21a2 2 0 0 0 4 0" fill="none" stroke="currentColor" strokeWidth="2" />
     </svg>
   ),
+  alertCircle: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2" />
+      <line x1="12" y1="7" x2="12" y2="13" stroke="currentColor" strokeWidth="2" />
+      <circle cx="12" cy="16.5" r="0.75" fill="currentColor" />
+    </svg>
+  ),
   building: (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M5 21V7l7-4 7 4v14" fill="none" stroke="currentColor" strokeWidth="2" />
@@ -413,11 +420,12 @@ export default function HomePage() {
     setIsSubmitting(true);
     const chosenStaff = allStaff.find((s) => String(s.id) === String(formData.staff_member));
     if (chosenStaff?.is_available === false) {
-      const reason = chosenStaff.availability_reason;
+      const hostName = chosenStaff.full_name || chosenStaff.first_name || 'This host';
+      const reason = (chosenStaff.availability_reason || '').trim();
       showToastMessage(
         reason
-          ? `${chosenStaff.full_name || 'This host'} is unavailable: ${reason}`
-          : 'This host is currently unavailable. Please choose another host.'
+          ? `You can't alert ${hostName} right now: ${reason}`
+          : `You can't alert ${hostName} right now because they are unavailable.`
       );
       setIsSubmitting(false);
       return;
@@ -657,6 +665,16 @@ export default function HomePage() {
   };
 
   const handleBookWithStaff = (member) => {
+    if (!member.is_available) {
+      const hostName = member.full_name || member.first_name || 'This host';
+      const reasonText = (member.availability_reason || '').trim();
+      showToastMessage(
+        reasonText
+          ? `You can't alert ${hostName} right now: ${reasonText}`
+          : `You can't alert ${hostName} right now because they're unavailable.`
+      );
+      return;
+    }
     if (isStaffUnavailableOnDate(member.id, formData.appointment_date)) {
       showToastMessage('That staff member is unavailable on the selected date.');
       return;
@@ -685,11 +703,12 @@ export default function HomePage() {
 
   const handleAlertHost = () => {
     if (!hasAvailableStaff) {
-      const reason = firstOfflineStaff?.availability_reason;
+      const reason = (firstOfflineStaff?.availability_reason || '').trim();
+      const fallbackName = firstOfflineStaff?.full_name || 'your host';
       showToastMessage(
         reason
-          ? `All hosts are offline: ${reason}`
-          : 'All hosts are currently unavailable. Please try again later.'
+          ? `You can't alert ${fallbackName} right now: ${reason}`
+        : 'You can\'t alert a host right now because everyone is unavailable. Please try again later.'
       );
       return;
     }
@@ -1519,10 +1538,15 @@ export default function HomePage() {
                               <span className="status-dot" />
                               {memberStatus}
                             </div>
-                            <div className="dept-staff-desc">
-                              {member.description || member.bio || member.specialty || member.role || 'Ready to help with your request.'}
-                            </div>
-                            <button type="button" className="dept-book-btn" onClick={() => handleBookWithStaff(member)} disabled={!isMemberSelectable}>
+                          <div className="dept-staff-desc">
+                            {member.description || member.bio || member.specialty || member.role || 'Ready to help with your request.'}
+                          </div>
+                          {!isMemberSelectable && member.availability_reason && (
+                            <p className="dept-staff-reason">
+                              {member.availability_reason}
+                            </p>
+                          )}
+                          <button type="button" className="dept-book-btn" onClick={() => handleBookWithStaff(member)} disabled={!isMemberSelectable}>
                               Check in with {(member.full_name || member.first_name || 'Staff').split(' ')[0]} →
                             </button>
                           </div>
@@ -1557,8 +1581,9 @@ export default function HomePage() {
 
       {/* Toast */}
       {toast && (
-        <div className="toast" id="toast">
-          {toast}
+        <div className="toast" id="toast" role="status" aria-live="polite">
+          <span className="toast-icon" aria-hidden="true">{ICONS.alertCircle}</span>
+          <span>{toast}</span>
         </div>
       )}
 

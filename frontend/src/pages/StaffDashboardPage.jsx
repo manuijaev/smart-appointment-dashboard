@@ -329,6 +329,28 @@ export default function StaffDashboardPage() {
     return Math.ceil(diff / oneWeek);
   };
 
+  const getRelativeTimeLabel = (timestamp) => {
+    if (!timestamp) return 'just now';
+    const createdTime = new Date(timestamp).getTime();
+    if (Number.isNaN(createdTime)) return 'just now';
+    const diffSeconds = Math.max(Math.round((Date.now() - createdTime) / 1000), 0);
+    if (diffSeconds < 10) return 'just now';
+    const units = [
+      { label: 'day', seconds: 86400 },
+      { label: 'hour', seconds: 3600 },
+      { label: 'minute', seconds: 60 },
+    ];
+
+    for (const unit of units) {
+      if (diffSeconds >= unit.seconds) {
+        const value = Math.floor(diffSeconds / unit.seconds);
+        return `${value} ${unit.label}${value > 1 ? 's' : ''} ago`;
+      }
+    }
+
+    return `${diffSeconds} second${diffSeconds === 1 ? '' : 's'} ago`;
+  };
+
   const filteredAppointments = appointments.filter(a => {
     // Filter by status for specific tabs
     if (activeTab === 'pending' && a.status !== 'Pending') return false;
@@ -712,8 +734,13 @@ export default function StaffDashboardPage() {
               disabled={availabilityLoading}
               aria-live="polite"
             >
+              <span className="sd-availability-icon" aria-hidden="true">
+                {isCurrentlyAvailable ? ICONS.check : ICONS.alertCircle}
+              </span>
               <span className="sd-availability-dot" aria-hidden="true"></span>
-              {isCurrentlyAvailable ? 'Available' : 'Unavailable'}
+              <span className="sd-availability-text">
+                {isCurrentlyAvailable ? 'Available' : 'Unavailable'}
+              </span>
             </button>
             <div className="sd-notification-wrapper" ref={notificationRef}>
               <button className="sd-icon-btn" onClick={() => setNotificationsOpen(!notificationsOpen)}>
@@ -861,7 +888,10 @@ export default function StaffDashboardPage() {
                           </div>
                           <div className="sd-list-info">
                             <div className="sd-list-name">{apt.visitor_name}</div>
-                            <div className="sd-list-meta">{formatDate(apt.appointment_date)} - {formatTime(apt.appointment_date)}</div>
+                            <div className="sd-list-meta">
+                              {formatDate(apt.appointment_date)} - {formatTime(apt.appointment_date)}
+                              <span className="sd-list-time-since">Sent {getRelativeTimeLabel(apt.created_at)}</span>
+                            </div>
                           </div>
                           <span className={`sd-badge sd-badge-${apt.status?.toLowerCase()}`}>{apt.status}</span>
                         </div>
@@ -885,7 +915,10 @@ export default function StaffDashboardPage() {
                           </div>
                           <div className="sd-list-info">
                             <div className="sd-list-name">{apt.visitor_name}</div>
-                            <div className="sd-list-meta">{formatDate(apt.appointment_date)} - {formatTime(apt.appointment_date)}</div>
+                            <div className="sd-list-meta">
+                              {formatDate(apt.appointment_date)} - {formatTime(apt.appointment_date)}
+                              <span className="sd-list-time-since">Sent {getRelativeTimeLabel(apt.created_at)}</span>
+                            </div>
                           </div>
                           <span className="sd-badge sd-badge-accepted">{apt.status}</span>
                         </div>
@@ -939,7 +972,13 @@ export default function StaffDashboardPage() {
                           }}>
                             {getInitials(apt.visitor_name)}
                           </div>
-                          <span className={`sd-badge sd-badge-${apt.status?.toLowerCase()}`}>{apt.status}</span>
+                          <div className="sd-appt-status-stack">
+                            <span className={`sd-badge sd-badge-${apt.status?.toLowerCase()}`}>{apt.status}</span>
+                            <div className="sd-appt-since">
+                              <span className="sd-appt-since-icon">{ICONS.clock}</span>
+                              <span>Sent {getRelativeTimeLabel(apt.created_at)}</span>
+                            </div>
+                          </div>
                         </div>
                         
                         <div className="sd-appt-body">
@@ -1030,6 +1069,7 @@ export default function StaffDashboardPage() {
                           <div className="sd-timeline-content">
                             <div className="sd-timeline-name">{apt.visitor_name}</div>
                             <div className="sd-timeline-meta">{apt.service?.name || 'Appointment'}</div>
+                            <div className="sd-timeline-since">Sent {getRelativeTimeLabel(apt.created_at)}</div>
                           </div>
                           <span className={`sd-badge sd-badge-${apt.status?.toLowerCase()}`}>{apt.status}</span>
                         </div>
