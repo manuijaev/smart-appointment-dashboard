@@ -183,6 +183,7 @@ export default function HomePage() {
     dateValid: false,
     dateError: false,
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const totalSteps = 7;
 
   useEffect(() => {
