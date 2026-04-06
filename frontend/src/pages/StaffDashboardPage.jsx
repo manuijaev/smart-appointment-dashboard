@@ -729,13 +729,18 @@ export default function StaffDashboardPage() {
           <button className="sd-nav-item" onClick={() => { setActiveTab('settings'); setSidebarOpen(false); }}>
             {ICONS.settings}<span>Settings</span>
           </button>
-        </nav>
-
-        <div className="sd-sidebar-logout">
-          <button className="sd-logout-btn" onClick={handleLogout}>
-            {ICONS.logout}<span>Sign Out</span>
+          <div className="sd-nav-section">ACCOUNT</div>
+          <button
+            className="sd-nav-item sd-nav-item-logout"
+            onClick={() => {
+              setSidebarOpen(false);
+              handleLogout();
+            }}
+          >
+            {ICONS.logout}
+            <span>Sign Out</span>
           </button>
-        </div>
+        </nav>
       </aside>
 
       {/* Main Content */}
