@@ -1077,18 +1077,48 @@ export default function StaffDashboardPage() {
                     </div>
                     <div className="sd-list-items">
                       {filteredAppointments.map((apt) => (
-                        <button
-                          key={apt.id}
-                          type="button"
-                          className="sd-list-simple"
-                          onClick={() => openPreview(apt)}
-                        >
-                          <div>
-                            <div className="sd-list-simple-name">{apt.visitor_name}</div>
-                            <div className="sd-list-simple-time">Sent {getRelativeTimeLabel(apt.created_at)}</div>
+                        <div key={apt.id} className="sd-list-simple-card">
+                          <button
+                            type="button"
+                            className="sd-list-simple"
+                            onClick={() => openPreview(apt)}
+                          >
+                            <div>
+                              <div className="sd-list-simple-name">{apt.visitor_name}</div>
+                              <div className="sd-list-simple-time">Sent {getRelativeTimeLabel(apt.created_at)}</div>
+                            </div>
+                            <div className="sd-list-simple-meta-group">
+                              <span className={`sd-list-simple-status sd-list-simple-status-${apt.status?.toLowerCase()}`}>{apt.status}</span>
+                              <span className="sd-list-simple-meta">{formatSentTime(apt.created_at || apt.appointment_date)}</span>
+                            </div>
+                          </button>
+                          <div className="sd-list-simple-actions">
+                            <button className="sd-btn sd-btn-accept" onClick={() => openResponseArea(apt.id, 'Accepted')}>Accept</button>
+                            <button className="sd-btn sd-btn-reschedule" onClick={() => openResponseArea(apt.id, 'Rescheduled')}>Reschedule</button>
+                            <button className="sd-btn sd-btn-decline" onClick={() => openResponseArea(apt.id, 'Declined')}>Decline</button>
                           </div>
-                          <span className="sd-list-simple-meta">{formatSentTime(apt.created_at || apt.appointment_date)}</span>
-                        </button>
+                          {responseAreaOpen[apt.id] && (
+                            <div className="sd-response-area sd-response-area-list">
+                              <textarea
+                                placeholder="Add a response note..."
+                                value={responseNote[apt.id] || ''}
+                                onChange={(e) => setResponseNote(prev => ({ ...prev, [apt.id]: e.target.value }))}
+                                rows="2"
+                              />
+                              <div className="sd-response-actions sd-response-actions-list">
+                                <button
+                                  className="sd-btn sd-btn-accept"
+                                  onClick={() => {
+                                    requestStatusUpdate(apt.id, apt.visitor_name, responseAction[apt.id] || 'Accepted');
+                                  }}
+                                >
+                                  Send & {responseAction[apt.id] || 'Accept'}
+                                </button>
+                                <button className="sd-btn sd-btn-view" onClick={() => closeResponseArea(apt.id)}>Cancel</button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </div>
