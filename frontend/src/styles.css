@@ -5767,48 +5767,6 @@ tr:hover .row-actions {
   }
 }
 
-@media (max-width: 768px) {
-  .visit-log-table,
-  .visit-log-table thead {
-    width: 100%;
-  }
-
-  .visit-log-table thead {
-    display: none;
-  }
-
-  .visit-log-table tbody {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .visit-log-table tbody tr {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 14px 16px;
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    background: var(--surface);
-  }
-
-  .visit-log-table tbody td {
-    display: flex;
-    justify-content: space-between;
-    padding: 6px 0;
-    border-bottom: none;
-  }
-
-  .visit-log-table td::before {
-    content: attr(data-label);
-    font-size: 9px;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--ink-mid);
-    margin-right: 8px;
-  }
-}
   .shell {
     grid-template-columns: 1fr;
     grid-template-rows: 56px 1fr;
@@ -5959,7 +5917,6 @@ tr:hover .row-actions {
   .staff-two-col {
     grid-template-columns: 1fr;
   }
-}
 
 @media (max-width: 768px) {
   .topbar {
@@ -5994,6 +5951,47 @@ tr:hover .row-actions {
 
   .search-bar {
     width: 100%;
+  }
+
+  .visit-log-table,
+  .visit-log-table thead {
+    width: 100%;
+  }
+
+  .visit-log-table thead {
+    display: none;
+  }
+
+  .visit-log-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .visit-log-table tbody tr {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--surface);
+  }
+
+  .visit-log-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: none;
+  }
+
+  .visit-log-table td::before {
+    content: attr(data-label);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--ink-mid);
+    margin-right: 8px;
   }
 
   .bell-dropdown {
@@ -10277,7 +10275,6 @@ tr:hover .row-actions {
   flex-direction: column;
   gap: 8px;
 }
-.sd-list-simple-meta-group {
 .sd-list-simple-meta-group {
   display: flex;
   flex-direction: column;
