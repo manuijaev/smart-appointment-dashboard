@@ -602,23 +602,17 @@ export default function AdminDashboardPage() {
 
       {/* Topbar */}
       <header className="topbar">
-        <div className="topbar-logo">
-          <div className="logo-mark"></div>
-        </div>
-        <div className="topbar-brand">
-          <div>
-            <div className="brand-text">GATEPASS</div>
-            <div className="brand-sub">Control Center</div>
+        <div className="topbar-brand-row">
+          <div className="topbar-logo">
+            <div className="logo-mark"></div>
           </div>
-        </div>
-        <div className="topbar-center">
-          <div className="breadcrumb">
-            <span>System</span>
-            <span>/</span>
-            <strong>Admin Dashboard</strong>
+          <div className="topbar-brand">
+            <div>
+              <div className="brand-text">GATEPASS</div>
+              <div className="brand-sub">Control Center</div>
+            </div>
           </div>
-        </div>
-          <div className="topbar-right">
+          <div className="topbar-actions">
             <button
               className="shell-nav-toggle"
               type="button"
@@ -630,57 +624,67 @@ export default function AdminDashboardPage() {
               <span></span>
               <span></span>
             </button>
-            <div className="topbar-icon-btn" title="Notifications" onClick={() => setBellDropdownOpen(!bellDropdownOpen)} style={{ position: 'relative' }}>
+            <div
+              className="topbar-icon-btn notification-trigger"
+              title="Notifications"
+              onClick={() => setBellDropdownOpen((prev) => !prev)}
+              style={{ position: 'relative' }}
+            >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                 <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
               </svg>
               {unreadCount > 0 && <div className="notif-badge">{unreadCount}</div>}
-              
-              {/* Bell Dropdown */}
-            {bellDropdownOpen && (
-              <div className="bell-dropdown">
-                <div className="dropdown-head">
-                  <div className="dropdown-title">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                      <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                    </svg>
-                    Notifications
-                    <span style={{ background: 'var(--red)', color: '#fff', fontSize: '9px', padding: '1px 6px', borderRadius: '10px', fontFamily: 'DM Mono,monospace' }}>{unreadCount} new</span>
-                  </div>
-                  <div className="dropdown-actions">
-                    <span className="dropdown-link" onClick={(e) => { e.stopPropagation(); markAllRead(); }}>Mark all read</span>
-                  </div>
-                </div>
-                
-                {notifications.slice(0, 5).map((notif) => {
-                  const cat = NOTIF_CATEGORIES[notif.category] || NOTIF_CATEGORIES.appointments;
-                  return (
-                    <div key={notif.id} className={`dropdown-item ${notif.unread ? 'unread' : ''}`} onClick={openNotifications}>
-                      <div className="di-icon" style={{ background: cat.bg, border: '1px solid ' + cat.border }}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={cat.color} strokeWidth="2">
-                          <path d={cat.icon}></path>
-                        </svg>
-                      </div>
-                      <div className="di-text">
-                        <div className="di-title">{notif.title}</div>
-                        <div className="di-time">{notif.time}</div>
-                      </div>
-                      {notif.unread && <div className="di-dot" style={{ background: cat.color }}></div>}
+              {bellDropdownOpen && (
+                <div className="bell-dropdown">
+                  <div className="dropdown-head">
+                    <div className="dropdown-title">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                      </svg>
+                      Notifications
+                      <span className="dropdown-unread">{unreadCount} new</span>
                     </div>
-                  );
-                })}
-                
-                <div className="dropdown-footer">
-                  <a onClick={(e) => { e.stopPropagation(); openNotifications(); }}>View all notifications</a>
+                    <div className="dropdown-actions">
+                      <span className="dropdown-link" onClick={(e) => { e.stopPropagation(); markAllRead(); }}>Mark all read</span>
+                    </div>
+                  </div>
+                  {notifications.slice(0, 5).map((notif) => {
+                    const cat = NOTIF_CATEGORIES[notif.category] || NOTIF_CATEGORIES.appointments;
+                    return (
+                      <div key={notif.id} className={`dropdown-item ${notif.unread ? 'unread' : ''}`} onClick={openNotifications}>
+                        <div className="di-icon" style={{ background: cat.bg, border: '1px solid ' + cat.border }}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={cat.color} strokeWidth="2">
+                            <path d={cat.icon}></path>
+                          </svg>
+                        </div>
+                        <div className="di-text">
+                          <div className="di-title">{notif.title}</div>
+                          <div className="di-time">{notif.time}</div>
+                        </div>
+                        {notif.unread && <div className="di-dot" style={{ background: cat.color }}></div>}
+                      </div>
+                    );
+                  })}
+                  <div className="dropdown-footer">
+                    <a onClick={(e) => { e.stopPropagation(); openNotifications(); }}>View all notifications</a>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
             <div className="avatar">{getInitials(user?.full_name || 'AD')}</div>
           </div>
+        </div>
+        <div className="topbar-center">
+          <div className="breadcrumb">
+            <span>System</span>
+            <span>/</span>
+            <strong>Admin Dashboard</strong>
+          </div>
+        </div>
       </header>
+
       <div className={`shell-backdrop ${navOpen ? 'open' : ''}`} onClick={() => setNavOpen(false)}></div>
 
       {/* Icon Rail */}

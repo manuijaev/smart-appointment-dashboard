@@ -2094,13 +2094,22 @@ body.admin-background::after {
   grid-column: 1 / -1;
   grid-row: 1;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
   border-bottom: 1px solid #1e2d45;
   background: #080c14;
   padding: 0 20px 0 0;
   position: sticky;
   top: 0;
   z-index: 100;
+}
+
+.topbar-brand-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .topbar-logo {
@@ -2147,7 +2156,7 @@ body.admin-background::after {
 }
 
 .topbar-center {
-  flex: 1;
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -2172,11 +2181,11 @@ body.admin-background::after {
   font-weight: 500;
 }
 
-.topbar-right {
+.topbar-actions {
+  margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-left: auto;
+  gap: 10px;
 }
 
 .search-bar {
