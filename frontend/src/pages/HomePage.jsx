@@ -328,6 +328,8 @@ export default function HomePage() {
   };
 
   const submitBooking = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const payload = {
         visitor_name: formData.visitor_name,
@@ -374,6 +376,8 @@ export default function HomePage() {
       const firstField = detail && typeof detail === 'object' ? Object.keys(detail)[0] : null;
       const fieldMessage = firstField ? `${firstField}: ${detail[firstField]}` : null;
       showToastMessage(fieldMessage || 'Failed to submit visit request. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1037,8 +1041,19 @@ export default function HomePage() {
 
                   <div className="step-nav">
                     <button className="step-btn step-back" onClick={() => goToStep(6)}>Back</button>
-                    <button className="step-btn step-submit" onClick={submitBooking}>
-                      Submit visit request
+                    <button
+                      className={`step-btn step-submit${isSubmitting ? ' submitting' : ''}`}
+                      onClick={submitBooking}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? 'SUBMITTING REQUEST' : 'Submit visit request'}
+                      {isSubmitting && (
+                        <span className="loading-dots" aria-hidden="true">
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                        </span>
+                      )}
                     </button>
                   </div>
                 </div>
