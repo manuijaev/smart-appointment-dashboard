@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import api from '../services/api';
 
 const AuthContext = createContext(null);
@@ -63,7 +63,16 @@ export function AuthProvider({ children }) {
     channelRef.current?.postMessage({ type: 'auth:logout' });
   };
 
-  const value = useMemo(() => ({ user, login, logout }), [user]);
+  const updateUser = useCallback((updates) => {
+    setUser((prev) => {
+      const next = { ...(prev || {}), ...updates };
+      localStorage.setItem('user', JSON.stringify(next));
+      channelRef.current?.postMessage({ type: 'auth:login', user: next });
+      return next;
+    });
+  }, []);
+
+  const value = useMemo(() => ({ user, login, logout, updateUser }), [user, updateUser, login, logout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

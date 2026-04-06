@@ -10,6 +10,7 @@ from .permissions import IsAdminRole
 from .serializers import (
     FCMTokenUpdateSerializer,
     StaffListSerializer,
+    StaffAvailabilitySerializer,
     StaffLoginSerializer,
     StaffManageSerializer,
     StaffRegisterSerializer,
@@ -157,6 +158,26 @@ class StaffResetPasswordView(generics.UpdateAPIView):
             'message': 'Password reset successfully',
             'temp_password': serializer.get_temp_password()
         })
+
+
+class StaffAvailabilityUpdateView(generics.UpdateAPIView):
+    serializer_class = StaffAvailabilitySerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+    def update(self, request, *args, **kwargs):
+        partial = True
+        serializer = self.get_serializer(self.get_object(), data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        staff_data = StaffListSerializer(self.get_object()).data
+        return Response({
+            'message': 'Availability updated',
+            'user': staff_data,
+        })
+
 
 
 class VapidPublicKeyView(generics.RetrieveAPIView):

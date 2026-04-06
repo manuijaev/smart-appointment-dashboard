@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { sendAppointmentRequestEmail } from '../services/emailjs';
@@ -143,6 +143,12 @@ const ICONS = {
   ),
 };
 
+const HERO_TYPEWRITER_LINES = [
+  { text: 'Let your host know', variant: 'plain' },
+  { text: "you're here.", variant: 'emphasized' },
+  { text: 'We will handle the rest.', variant: 'line2' },
+];
+
 export default function HomePage() {
   const EAT_TIMEZONE = 'Africa/Nairobi';
   const STAFF_UNAVAILABLE_STORAGE_KEY = 'staff_unavailable_by_date';
@@ -185,12 +191,58 @@ export default function HomePage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const totalSteps = 7;
+  const [typedLines, setTypedLines] = useState(HERO_TYPEWRITER_LINES.map(() => ''));
+  const [typingLine, setTypingLine] = useState(0);
+  const [typewriterDone, setTypewriterDone] = useState(false);
+  const getInitialMobileView = () => (typeof window !== 'undefined' ? window.innerWidth <= 900 : false);
+  const [isMobileView, setIsMobileView] = useState(getInitialMobileView);
+  const [isHeroFormVisible, setIsHeroFormVisible] = useState(() => !getInitialMobileView());
+  const heroRef = useRef(null);
 
   useEffect(() => {
     document.body.classList.add('home-background');
     return () => {
       document.body.classList.remove('home-background');
     };
+  }, []);
+
+  useEffect(() => {
+    const timers = [];
+    const buffer = HERO_TYPEWRITER_LINES.map(() => '');
+    let lineIndex = 0;
+    let charIndex = 0;
+
+    const finishTyping = () => {
+      setTypewriterDone(true);
+      setTypingLine(HERO_TYPEWRITER_LINES.length - 1);
+    };
+
+    const typeStep = () => {
+      if (lineIndex >= HERO_TYPEWRITER_LINES.length) {
+        finishTyping();
+        return;
+      }
+
+      setTypingLine(lineIndex);
+      const target = HERO_TYPEWRITER_LINES[lineIndex].text;
+      if (charIndex < target.length) {
+        charIndex += 1;
+        buffer[lineIndex] = target.slice(0, charIndex);
+        setTypedLines([...buffer]);
+        timers.push(setTimeout(typeStep, 65));
+      } else {
+        lineIndex += 1;
+        charIndex = 0;
+        if (lineIndex < HERO_TYPEWRITER_LINES.length) {
+          timers.push(setTimeout(typeStep, 420));
+        } else {
+          timers.push(setTimeout(finishTyping, 240));
+        }
+      }
+    };
+
+    timers.push(setTimeout(typeStep, 450));
+    return () => timers.forEach((timer) => clearTimeout(timer));
   }, []);
 
   useEffect(() => {
@@ -219,6 +271,21 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    const handleResize = () => {
+      if (typeof window === 'undefined') return;
+      const mobile = window.innerWidth <= 900;
+      setIsMobileView(mobile);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    setIsHeroFormVisible(!isMobileView);
+  }, [isMobileView]);
+
+  useEffect(() => {
     try {
       const raw = localStorage.getItem(STAFF_UNAVAILABLE_STORAGE_KEY);
       setUnavailableByDate(raw ? JSON.parse(raw) : {});
@@ -237,6 +304,20 @@ export default function HomePage() {
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, []);
+
+  const scrollToHero = () => {
+    heroRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const revealMobileHeroForm = () => {
+    setIsHeroFormVisible(true);
+    scrollToHero();
+  };
+
+  const hideMobileHeroForm = () => {
+    setIsHeroFormVisible(false);
+    scrollToHero();
+  };
 
   useEffect(() => {
     if (formData.department) {
@@ -330,6 +411,17 @@ export default function HomePage() {
   const submitBooking = async () => {
     if (isSubmitting) return;
     setIsSubmitting(true);
+    const chosenStaff = allStaff.find((s) => String(s.id) === String(formData.staff_member));
+    if (chosenStaff?.is_available === false) {
+      const reason = chosenStaff.availability_reason;
+      showToastMessage(
+        reason
+          ? `${chosenStaff.full_name || 'This host'} is unavailable: ${reason}`
+          : 'This host is currently unavailable. Please choose another host.'
+      );
+      setIsSubmitting(false);
+      return;
+    }
     try {
       const payload = {
         visitor_name: formData.visitor_name,
@@ -527,6 +619,7 @@ export default function HomePage() {
         name: member.division_name || '',
       },
       is_available: typeof member.is_available === 'boolean' ? member.is_available : !!member.is_active,
+      availability_reason: member.availability_reason || '',
     };
   };
 
@@ -582,8 +675,43 @@ export default function HomePage() {
       divisionName: member.division?.name || '',
     });
     setCurrentStep(1);
-    setShowBookingModal(true);
+    if (isMobileView) {
+      setShowBookingModal(false);
+      revealMobileHeroForm();
+    } else {
+      setShowBookingModal(true);
+    }
   };
+
+  const handleAlertHost = () => {
+    if (!hasAvailableStaff) {
+      const reason = firstOfflineStaff?.availability_reason;
+      showToastMessage(
+        reason
+          ? `All hosts are offline: ${reason}`
+          : 'All hosts are currently unavailable. Please try again later.'
+      );
+      return;
+    }
+    if (isMobileView) {
+      revealMobileHeroForm();
+    } else {
+      setShowBookingModal(true);
+    }
+  };
+
+  const selectedStaff = formData.staff_member ? allStaff.find((member) => String(member.id) === String(formData.staff_member)) : null;
+  const hasAvailableStaff = allStaff.some((member) => member.is_available);
+  const firstOfflineStaff = allStaff.find((member) => !member.is_available);
+  const heroUnavailableStaff = selectedStaff?.is_available === false ? selectedStaff : (!hasAvailableStaff ? firstOfflineStaff : null);
+  const heroUnavailableLabel = heroUnavailableStaff
+    ? heroUnavailableStaff.full_name
+      ? `${heroUnavailableStaff.full_name} is offline`
+      : 'Hosts temporarily offline'
+    : '';
+  const heroUnavailableDetail = heroUnavailableStaff
+    ? heroUnavailableStaff.availability_reason || 'Visitors cannot alert this host right now.'
+    : '';
 
   const normalizedGlobalTerm = normalize(globalSearchTerm).trim();
   const normalizedDeptTerm = normalize(deptSearchTerm).trim();
@@ -610,6 +738,11 @@ export default function HomePage() {
     })
     .filter(member => (normalizedDeptTerm ? matchesTerm(member, normalizedDeptTerm) : true))
     .sort((a, b) => (b.is_available === a.is_available ? 0 : b.is_available ? 1 : -1));
+
+  const heroClasses = ['hero'];
+  if (isMobileView) heroClasses.push('hero-mobile');
+  if (isMobileView && isHeroFormVisible) heroClasses.push('hero-mobile-active');
+  const heroTitleAnnounce = HERO_TYPEWRITER_LINES.map((line) => line.text).join(' ');
 
   return (
     <div className="home-page">
@@ -683,15 +816,23 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="hero">
+      <section className={heroClasses.join(' ')} ref={heroRef}>
         {/* Left: Copy */}
         <div className="hero-left">
           <div className="hero-overline">Visitor Management Desk</div>
 
-          <h1 className="hero-title">
-            Let your host know<br />
-            <em>you're here.</em><br />
-            <span className="line2">We will handle the rest.</span>
+          <h1 className="hero-title" aria-label={heroTitleAnnounce}>
+            {typedLines.map((line, index) => {
+              const variant = HERO_TYPEWRITER_LINES[index]?.variant;
+              const classes = ['typewriter-line', variant ? `typewriter-line--${variant}` : undefined];
+              if (!typewriterDone && typingLine === index) classes.push('is-active');
+              if (typewriterDone && index === HERO_TYPEWRITER_LINES.length - 1) classes.push('is-active');
+              return (
+                <span key={`hero-line-${index}`} className={classes.filter(Boolean).join(' ')}>
+                  {line}
+                </span>
+              );
+            })}
           </h1>
 
           <p className="hero-desc">
@@ -699,7 +840,11 @@ export default function HomePage() {
           </p>
 
           <div className="hero-cta-row">
-            <button className="cta-primary" onClick={() => setShowBookingModal(true)}>
+            <button
+              className={`cta-primary${!hasAvailableStaff ? ' cta-primary--disabled' : ''}`}
+              onClick={handleAlertHost}
+              disabled={!hasAvailableStaff}
+            >
               <span className="icon" aria-hidden="true">{ICONS.clipboard}</span>
               Alert My Host
             </button>
@@ -707,6 +852,16 @@ export default function HomePage() {
               See how it works
             </div>
           </div>
+
+          {heroUnavailableStaff && (
+            <div className="hero-unavailable-panel" aria-live="polite">
+              <div className="hero-unavailable-pill" />
+              <div>
+                <p className="hero-unavailable-label">{heroUnavailableLabel}</p>
+                <p className="hero-unavailable-detail">{heroUnavailableDetail}</p>
+              </div>
+            </div>
+          )}
 
           <div className="hero-trust">
             <div className="trust-item">
@@ -733,6 +888,16 @@ export default function HomePage() {
 
         {/* Right: Visit request form */}
         <div className="hero-right">
+          {isMobileView && isHeroFormVisible && (
+            <button
+              type="button"
+              className="hero-mobile-close"
+              onClick={hideMobileHeroForm}
+              aria-label="Back to visitor management desk"
+            >
+              ← Back to desk
+            </button>
+          )}
           <div className="form-panel">
             {!showSuccess ? (
               <>
@@ -932,6 +1097,9 @@ export default function HomePage() {
                                   {statusText}
                                 </span>
                               </div>
+                              {!isSelectable && s.availability_reason && (
+                                <div className="spc-status-hint">{s.availability_reason}</div>
+                              )}
                               <div className="spc-check icon" aria-hidden="true">{ICONS.check}</div>
                             </div>
                           );

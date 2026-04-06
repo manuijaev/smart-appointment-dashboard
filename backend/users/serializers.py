@@ -11,7 +11,14 @@ class StaffListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'full_name', 'email', 'phone', 'department', 'department_name', 'division', 'division_name', 'role', 'is_active']
+        fields = ['id', 'full_name', 'email', 'phone', 'department', 'department_name', 'division', 'division_name', 'role', 'is_active', 'is_available', 'availability_reason']
+
+
+
+class StaffAvailabilitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['is_available', 'availability_reason']
 
 
 class StaffRegisterSerializer(serializers.ModelSerializer):
@@ -54,6 +61,8 @@ class StaffManageSerializer(serializers.ModelSerializer):
             'division_name',
             'role',
             'is_active',
+            'is_available',
+            'availability_reason',
             'password',
         ]
         read_only_fields = ['id']
@@ -195,6 +204,8 @@ class StaffLoginSerializer(TokenObtainPairSerializer):
             'role': self.user.role,
             'department': self.user.department_id,
             'division': self.user.division_id,
+            'is_available': self.user.is_available,
+            'availability_reason': self.user.availability_reason,
         }
         return data
 
