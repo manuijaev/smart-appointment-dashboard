@@ -5684,7 +5684,7 @@ tr:hover .row-actions {
 @media (max-width: 1024px) {
   .shell {
     grid-template-columns: 1fr;
-    grid-template-rows: 56px 1fr;
+    grid-template-rows: auto 1fr;
   }
 
   .shell-nav-toggle {
