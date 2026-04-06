@@ -183,6 +183,7 @@ export default function StaffDashboardPage() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [isCurrentlyAvailable, setIsCurrentlyAvailable] = useState(user?.is_available ?? true);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [overdueDismissedKey, setOverdueDismissedKey] = useState('');
   // Initialize notifications from localStorage for persistence
   const [notifications, setNotifications] = useState(() => {
     try {
@@ -312,6 +313,13 @@ export default function StaffDashboardPage() {
     return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
   };
 
+  const formatSentTime = (timestamp) => {
+    if (!timestamp) return '—';
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return '—';
+    return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
+
   const getDateLabel = () => {
     const date = new Date();
     return date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -359,7 +367,6 @@ export default function StaffDashboardPage() {
     if (activeTab === 'history' && ['Pending', 'Accepted'].includes(a.status)) return false;
     
     if (dateFilter === 'today' && !a.appointment_date.startsWith(today)) return false;
-    if (dateFilter === 'upcoming' && new Date(a.appointment_date) < new Date()) return false;
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       return (
@@ -381,6 +388,34 @@ export default function StaffDashboardPage() {
     acceptRate: appointments.length > 0 
       ? Math.round((appointments.filter(a => a.status === 'Accepted').length / appointments.length) * 100) 
       : 0,
+  };
+
+  const overdueAppointments = appointments
+    .filter(a => a.status === 'Pending')
+    .filter((a) => {
+      const created = new Date(a.created_at || a.appointment_date);
+      const createdMs = created.getTime();
+      if (Number.isNaN(createdMs)) return false;
+      return Date.now() - createdMs >= 30 * 60 * 1000;
+    })
+    .sort((a, b) => {
+      const aTime = new Date(a.created_at || a.appointment_date).getTime();
+      const bTime = new Date(b.created_at || b.appointment_date).getTime();
+      return aTime - bTime;
+    });
+
+  const overdueListKey = overdueAppointments.map((apt) => apt.id).join(',');
+  const showOverdueAnnouncement = overdueAppointments.length > 0 && overdueListKey && overdueListKey !== overdueDismissedKey;
+  const handleOverdueAnnouncementClick = () => {
+    if (!overdueAppointments.length) return;
+    openPreview(overdueAppointments[0]);
+    setOverdueDismissedKey(overdueListKey);
+  };
+  const handleOverdueAnnouncementKeyDown = (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleOverdueAnnouncementClick();
+    }
   };
 
   const updateStatus = async (appointmentId, status) => {
@@ -624,11 +659,6 @@ export default function StaffDashboardPage() {
     .sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date))
     .slice(0, 3);
 
-  const upcomingAppointments = appointments
-    .filter(a => new Date(a.appointment_date) >= new Date() && a.status === 'Accepted')
-    .sort((a, b) => new Date(a.appointment_date) - new Date(b.appointment_date))
-    .slice(0, 5);
-
   return (
     <div className="sd-container">
       {/* Toast Notification */}
@@ -640,6 +670,7 @@ export default function StaffDashboardPage() {
       )}
 
       {/* Sidebar */}
+      {sidebarOpen && <div className="sd-sidebar-backdrop" onClick={() => setSidebarOpen(false)} aria-hidden="true"></div>}
       <aside className={`sd-sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sd-sidebar-header">
           <div className="sd-brand">
@@ -801,6 +832,27 @@ export default function StaffDashboardPage() {
           </div>
         </header>
 
+        {showOverdueAnnouncement && (
+          <div
+            className="sd-overdue-announcement"
+            role="button"
+            tabIndex={0}
+            onClick={handleOverdueAnnouncementClick}
+            onKeyDown={handleOverdueAnnouncementKeyDown}
+          >
+            <div>
+              <p className="sd-overdue-announcement-title">⚠️ {overdueAppointments.length} pending requests overdue</p>
+              <p className="sd-overdue-announcement-detail">
+                Tap to open {overdueAppointments[0]?.visitor_name || 'the oldest request'} and see what needs attention.
+              </p>
+            </div>
+            <div className="sd-overdue-meta">
+              <span>Sent {getRelativeTimeLabel(overdueAppointments[0]?.created_at || overdueAppointments[0]?.appointment_date)}</span>
+              <span className="sd-overdue-cta">Open now →</span>
+            </div>
+          </div>
+        )}
+
         {/* Dashboard Content */}
         <div className="sd-content">
           {activeTab === 'dashboard' && (
@@ -866,8 +918,8 @@ export default function StaffDashboardPage() {
                 </div>
               </div>
 
-              {/* Recent & Upcoming */}
-              <div className="sd-two-col">
+              {/* Recent Activity */}
+              <div className="sd-section">
                 <div className="sd-panel">
                   <div className="sd-panel-header">
                     <h3>{ICONS.activity} Recent Activity</h3>
@@ -899,33 +951,6 @@ export default function StaffDashboardPage() {
                     )}
                   </div>
                 </div>
-
-                <div className="sd-panel">
-                  <div className="sd-panel-header">
-                    <h3>{ICONS.calendar} Upcoming</h3>
-                  </div>
-                  <div className="sd-list">
-                    {upcomingAppointments.length === 0 ? (
-                      <div className="sd-empty">No upcoming visit requests</div>
-                    ) : (
-                      upcomingAppointments.map(apt => (
-                        <div key={apt.id} className="sd-list-item" onClick={() => openPreview(apt)}>
-                          <div className="sd-list-avatar" style={{ background: 'var(--teal-light)', color: 'var(--teal-dark)' }}>
-                            {getInitials(apt.visitor_name)}
-                          </div>
-                          <div className="sd-list-info">
-                            <div className="sd-list-name">{apt.visitor_name}</div>
-                            <div className="sd-list-meta">
-                              {formatDate(apt.appointment_date)} - {formatTime(apt.appointment_date)}
-                              <span className="sd-list-time-since">Sent {getRelativeTimeLabel(apt.created_at)}</span>
-                            </div>
-                          </div>
-                          <span className="sd-badge sd-badge-accepted">{apt.status}</span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
               </div>
             </>
           )}
@@ -937,7 +962,6 @@ export default function StaffDashboardPage() {
                 <div className="sd-filter-tabs">
                   <button className={`sd-filter-tab ${dateFilter === 'all' ? 'active' : ''}`} onClick={() => setDateFilter('all')}>All</button>
                   <button className={`sd-filter-tab ${dateFilter === 'today' ? 'active' : ''}`} onClick={() => setDateFilter('today')}>Today</button>
-                  <button className={`sd-filter-tab ${dateFilter === 'upcoming' ? 'active' : ''}`} onClick={() => setDateFilter('upcoming')}>Upcoming</button>
                 </div>
                 <div className="sd-filter-actions">
                   <div className="sd-view-toggle">
@@ -951,99 +975,123 @@ export default function StaffDashboardPage() {
               </div>
 
               {/* Appointments Grid/List */}
-              <div className={viewMode === 'grid' ? 'sd-appointments-grid' : 'sd-appointments-list'}>
+              <div className="sd-appointments-container">
                 {filteredAppointments.length === 0 ? (
                   <div className="sd-empty-state">
                     {ICONS.calendar}
                     <h3>No visit requests found</h3>
                     <p>There are no visit requests matching your criteria.</p>
                   </div>
-                ) : (
-                  filteredAppointments.map(apt => {
-                    const overdueHours = apt.status === 'Pending' ? getOverdueHours(apt.appointment_date) : 0;
-                    const isUrgent = overdueHours > 24;
-                    
-                    return (
-                      <div key={apt.id} className={`sd-appt-card ${isUrgent ? 'urgent' : ''}`}>
-                        <div className="sd-appt-header">
-                          <div className="sd-appt-avatar" style={{ 
-                            background: isUrgent ? 'var(--red-light)' : apt.status === 'Accepted' ? 'var(--green-light)' : apt.status === 'Declined' ? 'var(--red-light)' : 'var(--gold-light)',
-                            color: isUrgent ? 'var(--red-dark)' : apt.status === 'Accepted' ? 'var(--green-dark)' : apt.status === 'Declined' ? 'var(--red-dark)' : 'var(--gold-dark)'
-                          }}>
-                            {getInitials(apt.visitor_name)}
-                          </div>
-                          <div className="sd-appt-status-stack">
-                            <span className={`sd-badge sd-badge-${apt.status?.toLowerCase()}`}>{apt.status}</span>
-                            <div className="sd-appt-since">
-                              <span className="sd-appt-since-icon">{ICONS.clock}</span>
-                              <span>Sent {getRelativeTimeLabel(apt.created_at)}</span>
+                ) : viewMode === 'grid' ? (
+                  <div className="sd-appointments-grid">
+                    {filteredAppointments.map(apt => {
+                      const overdueHours = apt.status === 'Pending' ? getOverdueHours(apt.appointment_date) : 0;
+                      const isUrgent = overdueHours > 24;
+                      
+                      return (
+                        <div key={apt.id} className={`sd-appt-card ${isUrgent ? 'urgent' : ''}`}>
+                          <div className="sd-appt-header">
+                            <div className="sd-appt-avatar" style={{ 
+                              background: isUrgent ? 'var(--red-light)' : apt.status === 'Accepted' ? 'var(--green-light)' : apt.status === 'Declined' ? 'var(--red-light)' : 'var(--gold-light)',
+                              color: isUrgent ? 'var(--red-dark)' : apt.status === 'Accepted' ? 'var(--green-dark)' : apt.status === 'Declined' ? 'var(--red-dark)' : 'var(--gold-dark)'
+                            }}>
+                              {getInitials(apt.visitor_name)}
                             </div>
-                          </div>
-                        </div>
-                        
-                        <div className="sd-appt-body">
-                          <h4 className="sd-appt-name">{apt.visitor_name}</h4>
-                          <p className="sd-appt-email">{apt.visitor_email}</p>
-                          
-                          <div className="sd-appt-details">
-                            <div className="sd-appt-detail">
-                              {ICONS.calendar}
-                              <span>{formatDate(apt.appointment_date)}</span>
-                            </div>
-                            <div className="sd-appt-detail">
-                              {ICONS.clock}
-                              <span>{formatTime(apt.appointment_date)}</span>
-                            </div>
-                            {apt.service?.name && (
-                              <div className="sd-appt-detail">
-                                {ICONS.activity}
-                                <span>{apt.service.name}</span>
+                            <div className="sd-appt-status-stack">
+                              <span className={`sd-badge sd-badge-${apt.status?.toLowerCase()}`}>{apt.status}</span>
+                              <div className="sd-appt-since">
+                                <span className="sd-appt-since-icon">{ICONS.clock}</span>
+                                <span>Sent {getRelativeTimeLabel(apt.created_at)}</span>
                               </div>
+                            </div>
+                          </div>
+                          
+                          <div className="sd-appt-body">
+                            <h4 className="sd-appt-name">{apt.visitor_name}</h4>
+                            <p className="sd-appt-email">{apt.visitor_email}</p>
+                            
+                            <div className="sd-appt-details">
+                              <div className="sd-appt-detail">
+                                {ICONS.calendar}
+                                <span>{formatDate(apt.appointment_date)}</span>
+                              </div>
+                              <div className="sd-appt-detail">
+                                {ICONS.clock}
+                                <span>{formatTime(apt.appointment_date)}</span>
+                              </div>
+                              {apt.service?.name && (
+                                <div className="sd-appt-detail">
+                                  {ICONS.activity}
+                                  <span>{apt.service.name}</span>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {apt.message && (
+                              <p className="sd-appt-message">"{apt.message}"</p>
                             )}
                           </div>
-                          
-                          {apt.message && (
-                            <p className="sd-appt-message">"{apt.message}"</p>
+
+                          {apt.status === 'Pending' ? (
+                            <div className="sd-appt-actions">
+                              <button className="sd-btn sd-btn-accept" onClick={() => openResponseArea(apt.id, 'Accepted')}>Accept</button>
+                              <button className="sd-btn sd-btn-reschedule" onClick={() => openResponseArea(apt.id, 'Rescheduled')}>Reschedule</button>
+                              <button className="sd-btn sd-btn-decline" onClick={() => openResponseArea(apt.id, 'Declined')}>Decline</button>
+                            </div>
+                          ) : (
+                            <div className="sd-appt-actions">
+                              <button className="sd-btn sd-btn-view" onClick={() => openPreview(apt)}>View Details</button>
+                            </div>
+                          )}
+
+                          {responseAreaOpen[apt.id] && (
+                            <div className="sd-response-area">
+                              <textarea 
+                                placeholder="Add a response note (optional)..."
+                                value={responseNote[apt.id] || ''}
+                                onChange={(e) => setResponseNote(prev => ({ ...prev, [apt.id]: e.target.value }))}
+                                rows="2"
+                              />
+                              <div className="sd-response-actions">
+                                <button 
+                                  className="sd-btn sd-btn-accept"
+                                  onClick={() => {
+                                    requestStatusUpdate(apt.id, apt.visitor_name, responseAction[apt.id] || 'Accepted');
+                                  }}
+                                >
+                                  Send & {responseAction[apt.id] || 'Accept'}
+                                </button>
+                                <button className="sd-btn sd-btn-view" onClick={() => closeResponseArea(apt.id)}>Cancel</button>
+                              </div>
+                            </div>
                           )}
                         </div>
-
-                        {apt.status === 'Pending' ? (
-                          <div className="sd-appt-actions">
-                            <button className="sd-btn sd-btn-accept" onClick={() => openResponseArea(apt.id, 'Accepted')}>Accept</button>
-                            <button className="sd-btn sd-btn-reschedule" onClick={() => openResponseArea(apt.id, 'Rescheduled')}>Reschedule</button>
-                            <button className="sd-btn sd-btn-decline" onClick={() => openResponseArea(apt.id, 'Declined')}>Decline</button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="sd-appointments-list-view">
+                    <div className="sd-list-toolbar">
+                      <button type="button" className="sd-list-back" onClick={() => setViewMode('grid')}>Return to grid</button>
+                      <span className="sd-list-count">{filteredAppointments.length} requests</span>
+                    </div>
+                    <div className="sd-list-items">
+                      {filteredAppointments.map((apt) => (
+                        <button
+                          key={apt.id}
+                          type="button"
+                          className="sd-list-simple"
+                          onClick={() => openPreview(apt)}
+                        >
+                          <div>
+                            <div className="sd-list-simple-name">{apt.visitor_name}</div>
+                            <div className="sd-list-simple-time">Sent {getRelativeTimeLabel(apt.created_at)}</div>
                           </div>
-                        ) : (
-                          <div className="sd-appt-actions">
-                            <button className="sd-btn sd-btn-view" onClick={() => openPreview(apt)}>View Details</button>
-                          </div>
-                        )}
-
-                        {/* Response Area */}
-                        {responseAreaOpen[apt.id] && (
-                          <div className="sd-response-area">
-                            <textarea 
-                              placeholder="Add a response note (optional)..."
-                              value={responseNote[apt.id] || ''}
-                              onChange={(e) => setResponseNote(prev => ({ ...prev, [apt.id]: e.target.value }))}
-                              rows="2"
-                            />
-                            <div className="sd-response-actions">
-                              <button 
-                                className="sd-btn sd-btn-accept"
-                                onClick={() => {
-                                  requestStatusUpdate(apt.id, apt.visitor_name, responseAction[apt.id] || 'Accepted');
-                                }}
-                              >
-                                Send & {responseAction[apt.id] || 'Accept'}
-                              </button>
-                              <button className="sd-btn sd-btn-view" onClick={() => closeResponseArea(apt.id)}>Cancel</button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
+                          <span className="sd-list-simple-meta">{formatSentTime(apt.created_at || apt.appointment_date)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
             </>
@@ -1170,7 +1218,7 @@ export default function StaffDashboardPage() {
               )}
             </div>
             <div className="sd-modal-footer">
-              <button className="sd-btn sd-btn-view" onClick={closePreview}>Close</button>
+              <button type="button" className="sd-btn sd-btn-view" onClick={closePreview}>Return</button>
               {previewItem.status === 'Pending' && (
                 <>
                   <button className="sd-btn sd-btn-accept" onClick={() => { closePreview(); openResponseArea(previewItem.id, 'Accepted'); }}>Accept</button>

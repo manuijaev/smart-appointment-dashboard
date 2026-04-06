@@ -8521,6 +8521,15 @@ tr:hover .row-actions {
   color: white;
 }
 
+.sd-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 37, 0.5);
+  z-index: 90;
+  backdrop-filter: blur(10px);
+  transition: opacity 0.3s ease;
+}
+
 .sd-logout-btn svg {
   width: 18px;
   height: 18px;
@@ -8551,6 +8560,54 @@ tr:hover .row-actions {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.sd-overdue-announcement {
+  margin: 12px 24px;
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(209, 53, 43, 0.12), rgba(255, 255, 255, 0.85));
+  border: 1px solid rgba(209, 53, 43, 0.3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 10px 28px rgba(209, 53, 43, 0.18);
+}
+
+.sd-overdue-announcement:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px rgba(209, 53, 43, 0.25);
+}
+
+.sd-overdue-announcement-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #7b1f1f;
+}
+
+.sd-overdue-announcement-detail {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #3d1f1f;
+}
+
+.sd-overdue-meta {
+  text-align: right;
+  font-size: 12px;
+  color: #2c1c16;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sd-overdue-cta {
+  font-size: 12px;
+  font-weight: 600;
+  color: #b73535;
+  letter-spacing: 0.05em;
 }
 
 .sd-menu-btn {
@@ -9157,6 +9214,11 @@ tr:hover .row-actions {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
+}
+
+.sd-appointments-container {
+  min-height: 200px;
+  position: relative;
 }
 
 .sd-appt-card {
@@ -9869,6 +9931,25 @@ tr:hover .row-actions {
   .sd-notification-item {
     padding: 14px 16px;
   }
+
+  .sd-overdue-announcement {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .sd-list-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .sd-list-simple {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .sd-list-simple-meta {
+    align-self: flex-end;
+  }
 }
 
 @media (max-width: 480px) {
@@ -9998,15 +10079,102 @@ tr:hover .row-actions {
     font-size: 13px;
   }
   
-  .sd-response-actions {
+.sd-response-actions {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .sd-response-actions .sd-btn {
     width: 100%;
     justify-content: center;
   }
+}
+
+.sd-appointments-list-view {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sd-list-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sd-list-back {
+  border: 1px solid rgba(26, 23, 20, 0.2);
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sd-list-back:hover {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 10px 20px rgba(28, 30, 33, 0.15);
+}
+
+.sd-list-count {
+  font-size: 12px;
+  color: var(--ink-light);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sd-list-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sd-list-simple {
+  border: 1px solid rgba(26, 23, 20, 0.08);
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  cursor: pointer;
+  color: inherit;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border 0.2s ease;
+}
+
+.sd-list-simple:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.1);
+  border-color: rgba(26, 23, 20, 0.2);
+}
+
+.sd-list-simple-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.sd-list-simple-time {
+  font-size: 12px;
+  color: var(--ink-light);
+  letter-spacing: 0.02em;
+}
+
+.sd-list-simple-meta {
+  font-size: 12px;
+  color: var(--ink-mid);
+  letter-spacing: 0.04em;
 }
 
 /* Notification Styles */
