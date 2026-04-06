@@ -8490,6 +8490,54 @@ tr:hover .row-actions {
   gap: 16px;
 }
 
+.sd-availability-toggle {
+  border: none;
+  border-radius: 999px;
+  padding: 0 18px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: linear-gradient(120deg, rgba(21, 128, 61, 0.12), rgba(26, 122, 114, 0.2));
+  color: var(--teal-dark);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.sd-availability-toggle.online {
+  box-shadow: 0 6px 18px rgba(26, 122, 114, 0.25);
+}
+
+.sd-availability-toggle.offline {
+  background: linear-gradient(120deg, rgba(192, 57, 43, 0.12), rgba(231, 76, 60, 0.2));
+  color: #c0392b;
+  box-shadow: 0 6px 18px rgba(192, 57, 43, 0.25);
+}
+
+.sd-availability-toggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sd-availability-toggle .sd-availability-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  display: inline-flex;
+  animation: availabilityPulseHeader 1.8s ease-in-out infinite;
+}
+
+@keyframes availabilityPulseHeader {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.5; }
+}
+
 .sd-date-display {
   font-size: 13px;
   color: var(--ink-mid);
@@ -8595,91 +8643,6 @@ tr:hover .row-actions {
   margin-bottom: 32px;
 }
 
-.sd-availability-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 22px;
-  margin-bottom: 28px;
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-}
-.sd-availability-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 20% 20%, rgba(26, 122, 114, 0.15), transparent 45%),
-    radial-gradient(circle at 80% 40%, rgba(201, 146, 42, 0.15), transparent 45%);
-  opacity: 0;
-  animation: availabilityGlow 5s ease-in-out infinite;
-}
-.sd-availability-card:hover::after {
-  opacity: 1;
-}
-.sd-availability-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 14px;
-}
-.sd-availability-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--ink);
-}
-.sd-availability-sub {
-  font-size: 12px;
-  color: var(--ink-faint);
-  margin-top: 4px;
-}
-.sd-availability-pill {
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  background: var(--green-light);
-  color: var(--green-dark);
-}
-.sd-availability-pill.offline {
-  background: #fdecea;
-  color: #c0392b;
-}
-.sd-availability-textarea {
-  width: 100%;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--surface2);
-  padding: 12px;
-  font-size: 14px;
-  color: var(--ink);
-  resize: vertical;
-  min-height: 80px;
-}
-.sd-availability-textarea:focus {
-  border-color: var(--teal);
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(26, 122, 114, 0.15);
-}
-.sd-availability-footnote {
-  font-size: 12px;
-  color: var(--ink-faint);
-  margin-top: 12px;
-}
-.sd-availability-actions {
-  margin-top: 18px;
-  display: flex;
-  justify-content: flex-end;
-}
-.sd-availability-actions .sd-btn {
-  min-width: 200px;
-}
-@keyframes availabilityGlow {
-  0% { opacity: 0; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.02); }
-  100% { opacity: 0; transform: scale(1); }
-}
 
 .sd-section-header {
   display: flex;

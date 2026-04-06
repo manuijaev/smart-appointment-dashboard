@@ -181,7 +181,6 @@ export default function StaffDashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dateFilter, setDateFilter] = useState('all');
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [availabilityReasonInput, setAvailabilityReasonInput] = useState(user?.availability_reason || '');
   const [isCurrentlyAvailable, setIsCurrentlyAvailable] = useState(user?.is_available ?? true);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   // Initialize notifications from localStorage for persistence
@@ -273,12 +272,7 @@ export default function StaffDashboardPage() {
     return () => clearInterval(intervalId);
   }, [loadMyAppointments]);
 
-  useEffect(() => {
-    setIsCurrentlyAvailable(user?.is_available ?? true);
-    setAvailabilityReasonInput(user?.availability_reason || '');
-  }, [user?.availability_reason, user?.is_available]);
-
-  // Update time every second for clock display
+// Update time every second for clock display
   useEffect(() => {
     const timerId = setInterval(() => {
       setCurrentTime(new Date());
@@ -496,22 +490,17 @@ export default function StaffDashboardPage() {
     const nextState = !isCurrentlyAvailable;
     setAvailabilityLoading(true);
     try {
-      const payload = {
-        is_available: nextState,
-        availability_reason: availabilityReasonInput.trim(),
-      };
-      const { data } = await api.patch('/staff/me/availability/', payload);
+      const { data } = await api.patch('/staff/me/availability/', { is_available: nextState });
       const updatedUser = data?.user || {};
       updateUser(updatedUser);
       setIsCurrentlyAvailable(updatedUser.is_available ?? nextState);
-      setAvailabilityReasonInput(updatedUser.availability_reason ?? '');
       showToast(
         nextState
           ? 'You are now available for visitors.'
           : 'Visitors will see you as unavailable until you toggle back.'
       );
     } catch (err) {
-      setToast(
+      showToast(
         err?.response?.data?.detail ||
         'Failed to update availability. Try again in a moment.'
       );
@@ -717,6 +706,15 @@ export default function StaffDashboardPage() {
             <div className="sd-date-display">
               {getDateLabel()} - {getTimeLabel()}
             </div>
+            <button
+              className={`sd-availability-toggle ${isCurrentlyAvailable ? 'online' : 'offline'}`}
+              onClick={handleAvailabilityToggle}
+              disabled={availabilityLoading}
+              aria-live="polite"
+            >
+              <span className="sd-availability-dot" aria-hidden="true"></span>
+              {isCurrentlyAvailable ? 'Available' : 'Unavailable'}
+            </button>
             <div className="sd-notification-wrapper" ref={notificationRef}>
               <button className="sd-icon-btn" onClick={() => setNotificationsOpen(!notificationsOpen)}>
                 {ICONS.bell}
@@ -837,44 +835,6 @@ export default function StaffDashboardPage() {
                   <button className="sd-action-card" onClick={handleExportCSV}>
                     <div className="sd-action-icon sd-action-icon-green">{ICONS.download}</div>
                     <span>Export Data</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="sd-availability-card">
-                <div className="sd-availability-header">
-                  <div>
-                    <div className="sd-availability-title">Visitor availability</div>
-                    <div className="sd-availability-sub">Let visitors know when someone is ready to receive them.</div>
-                  </div>
-                  <span className={`sd-availability-pill ${isCurrentlyAvailable ? 'online' : 'offline'}`}>
-                    {isCurrentlyAvailable ? 'Available' : 'Unavailable'}
-                  </span>
-                </div>
-                <textarea
-                  className="sd-availability-textarea"
-                  rows={3}
-                  maxLength={180}
-                  placeholder="Optional note (e.g. 'In meetings until 4 PM' or 'Out for a quick break')"
-                  value={availabilityReasonInput}
-                  onChange={(e) => setAvailabilityReasonInput(e.target.value)}
-                />
-                <div className="sd-availability-footnote">
-                  {isCurrentlyAvailable
-                    ? 'You will be seen as ready to accept visitors requesting your attention.'
-                    : 'Visitors will get blocked with this message until you mark yourself available again.'}
-                </div>
-                <div className="sd-availability-actions">
-                  <button
-                    className={`sd-btn ${isCurrentlyAvailable ? 'sd-btn-decline' : 'sd-btn-accept'}`}
-                    onClick={handleAvailabilityToggle}
-                    disabled={availabilityLoading}
-                  >
-                    {availabilityLoading
-                      ? 'Updating status…'
-                      : isCurrentlyAvailable
-                        ? 'Mark as unavailable'
-                        : 'Mark as available'}
                   </button>
                 </div>
               </div>
