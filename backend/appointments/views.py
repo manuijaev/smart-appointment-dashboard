@@ -11,7 +11,7 @@ from notifications.emailjs_service import (
     RESPONSE_TEMPLATE_ID,
     send_emailjs,
 )
-from notifications.sms_service import send_visitor_sms
+from notifications.sms_service import send_staff_sms, send_visitor_sms
 from users.models import UserDeviceToken
 
 from .models import Appointment
@@ -166,9 +166,9 @@ class AppointmentCreateView(generics.CreateAPIView):
         self._push_result = {'sent': False, 'reason': 'unknown'}
         
         # Send email immediately (synchronously)
+        formatted_date = _format_local_time(appointment.appointment_date)
         try:
             staff_email = appointment.staff_member.email
-            formatted_date = _format_local_time(appointment.appointment_date)
             success = send_emailjs(
                 REQUEST_TEMPLATE_ID,
                 {
@@ -207,6 +207,25 @@ class AppointmentCreateView(generics.CreateAPIView):
         except Exception as e:
             logger.exception('Failed to send push notification: %s', str(e))
             self._push_result = {'sent': False, 'reason': str(e)[:100]}
+
+        try:
+            staff_phone = appointment.staff_member.phone_number
+            if staff_phone:
+                department_name = appointment.department.name if appointment.department else ''
+                division_name = appointment.division.name if appointment.division else ''
+                send_staff_sms(
+                    phone_number=staff_phone,
+                    staff_name=appointment.staff_member.full_name or appointment.staff_member.email,
+                    visitor_name=appointment.visitor_name,
+                    appointment_date=formatted_date,
+                    department_name=department_name,
+                    division_name=division_name,
+                    visitor_phone=appointment.visitor_phone,
+                    visitor_email=appointment.visitor_email,
+                    visitor_message=appointment.message or '',
+                )
+        except Exception:
+            logger.exception('Failed to send staff SMS for appointment_id=%s', appointment.id)
 
 
 class MyAppointmentsView(generics.ListAPIView):

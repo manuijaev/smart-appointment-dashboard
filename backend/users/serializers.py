@@ -11,7 +11,7 @@ class StaffListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'full_name', 'email', 'department', 'department_name', 'division', 'division_name', 'role', 'is_active']
+        fields = ['id', 'full_name', 'email', 'phone_number', 'department', 'department_name', 'division', 'division_name', 'role', 'is_active']
 
 
 class StaffRegisterSerializer(serializers.ModelSerializer):
@@ -19,7 +19,7 @@ class StaffRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'full_name', 'email', 'department', 'division', 'role', 'password', 'fcm_token']
+        fields = ['id', 'full_name', 'email', 'phone_number', 'department', 'division', 'role', 'password', 'fcm_token']
         read_only_fields = ['id']
 
     def validate(self, attrs):
@@ -46,6 +46,7 @@ class StaffManageSerializer(serializers.ModelSerializer):
             'id',
             'full_name',
             'email',
+            'phone_number',
             'department',
             'department_name',
             'division',
@@ -77,6 +78,7 @@ class StaffCreateSerializer(serializers.ModelSerializer):
             'id',
             'full_name',
             'email',
+            'phone_number',
             'department',
             'division',
             'role',

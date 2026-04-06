@@ -221,6 +221,7 @@ export default function AdminDashboardPage() {
     department: '',
     division: '',
     password: generatePassword(),
+    phone_number: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [staffToast, setStaffToast] = useState(null);
@@ -338,6 +339,7 @@ export default function AdminDashboardPage() {
       department: '',
       division: '',
       password: generatePassword(),
+      phone_number: '',
     });
     setShowPassword(false);
     setShowStaffModal(true);
@@ -352,6 +354,7 @@ export default function AdminDashboardPage() {
       department: String(s.department || ''),
       division: String(s.division || ''),
       password: '',
+      phone_number: s.phone_number || '',
     });
     setShowStaffModal(true);
   };
@@ -369,6 +372,7 @@ export default function AdminDashboardPage() {
           role: staffForm.role,
           department: staffForm.department || null,
           division: staffForm.division || null,
+          phone_number: staffForm.phone_number || '',
         });
         showToast('Staff member updated.');
       } else {
@@ -379,6 +383,7 @@ export default function AdminDashboardPage() {
           department: staffForm.department,
           division: staffForm.division,
           password: staffForm.password,
+          phone_number: staffForm.phone_number,
         });
         showToast(`Account created. Temp password: ${response.data.temp_password}`);
       }
@@ -1507,6 +1512,17 @@ export default function AdminDashboardPage() {
                   <input className="field-input" placeholder="jane@org.com" type="email" value={staffForm.email} onChange={(e) => setStaffForm(f => ({ ...f, email: e.target.value }))} />
                 </div>
                 <div className="field">
+                  <label className="field-label">Phone Number</label>
+                  <input
+                    className="field-input"
+                    placeholder="+254700000000"
+                    type="tel"
+                    value={staffForm.phone_number}
+                    onChange={(e) => setStaffForm(f => ({ ...f, phone_number: e.target.value }))}
+                  />
+                  <div className="field-hint">Optional - include country code so Africa's Talking can deliver SMS.</div>
+                </div>
+                <div className="field">
                   <label className="field-label">Role *</label>
                   <select className="field-input" value={staffForm.role} onChange={(e) => setStaffForm(f => ({ ...f, role: e.target.value }))}>
                     <option>Staff</option>
@@ -1606,6 +1622,17 @@ export default function AdminDashboardPage() {
               <div className="field">
                 <label className="field-label">Email Address *</label>
                 <input className="field-input" value={staffForm.email} onChange={(e) => setStaffForm(f => ({ ...f, email: e.target.value }))} placeholder="jane@org.com" type="email" disabled={!!editingStaffId} />
+              </div>
+              <div className="field">
+                <label className="field-label">Phone Number</label>
+                <input
+                  className="field-input"
+                  value={staffForm.phone_number}
+                  onChange={(e) => setStaffForm(f => ({ ...f, phone_number: e.target.value }))}
+                  placeholder="+254700000000"
+                  type="tel"
+                />
+                <div className="field-hint">Optional - include country code so Africa's Talking can deliver SMS.</div>
               </div>
               <div className="field">
                 <label className="field-label">Role *</label>
