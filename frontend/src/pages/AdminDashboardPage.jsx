@@ -1,89 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
-
-// Mock notifications data
-const MOCK_NOTIFICATIONS = [
-  {
-    id: 1,
-    category: 'escalation',
-    title: '5 visit requests exceeding 24h pending',
-    message: 'The following staff have unresponded visit requests older than 24 hours: Alice Mwangi (2), Brian Otieno (2), Carol Njeri (1). Consider reassigning or sending a manual reminder.',
-    time: '2 minutes ago',
-    unread: true,
-    urgent: true,
-    date: 'Today',
-    staff: ['Alice Mwangi', 'Brian Otieno', 'Carol Njeri'],
-  },
-  {
-    id: 2,
-    category: 'staff',
-    title: 'New Staff Account Created',
-    message: 'You successfully created an account for David Kamau (Operations - Logistics). A welcome email with temporary credentials was sent to david@org.com. Staff must change password on first login.',
-    time: '34 minutes ago',
-    unread: true,
-    urgent: false,
-    date: 'Today',
-    staff: ['David Kamau'],
-  },
-  {
-    id: 3,
-    category: 'appointments',
-    title: 'Visit request volume spike - Engineering Dept',
-    message: 'Engineering received 14 new visit requests in the last 2 hours - 3x above the daily average. Staff in this department may need support or temporary reallocation.',
-    time: '1 hour ago',
-    unread: true,
-    urgent: false,
-    date: 'Today',
-    staff: [],
-  },
-  {
-    id: 4,
-    category: 'security',
-    title: 'Login from Unrecognised Device - Alice Mwangi',
-    message: 'Alice Mwangi signed in from a new device at 08:14 AM. Location: Nairobi, KE - Browser: Chrome - IP: 102.89.x.x. If this was not authorised, consider forcing a password reset immediately.',
-    time: '2 hours ago',
-    unread: true,
-    urgent: false,
-    date: 'Today',
-    staff: ['Alice Mwangi'],
-  },
-  {
-    id: 5,
-    category: 'report',
-    title: 'Daily Morning Digest - March 10',
-    message: 'Yesterday: 46 visit requests processed - 38 accepted - 4 declined - 4 rescheduled. Fastest responder: Brian Otieno (avg 18 min). Slowest: Carol Njeri (avg 4.2 hrs). 2 FCM push notifications failed to deliver.',
-    time: '7:00 AM today',
-    unread: false,
-    urgent: false,
-    date: 'Today',
-    staff: ['Brian Otieno', 'Carol Njeri'],
-  },
-  {
-    id: 6,
-    category: 'staff',
-    title: 'Staff Account Deactivated',
-    message: 'You deactivated Carol Njeri\'s account (HR - Recruitment). Her 3 pending visit requests were left unassigned. Consider reassigning them to another HR staff member.',
-    time: 'Yesterday, 4:22 PM',
-    unread: false,
-    urgent: false,
-    date: 'Yesterday',
-    staff: ['Carol Njeri'],
-  },
-  {
-    id: 7,
-    category: 'report',
-    title: 'Weekly Performance Report - Week 10',
-    message: '284 visit requests processed last week. Overall acceptance rate: 87%. Average response time improved by 18 minutes vs the previous week. Engineering remained the busiest department for the 3rd consecutive week.',
-    time: 'Monday, 7:00 AM',
-    unread: false,
-    urgent: false,
-    date: 'Yesterday',
-    staff: [],
-  },
-];
 
 // Notification categories config
 const NOTIF_CATEGORIES = {
@@ -94,6 +13,91 @@ const NOTIF_CATEGORIES = {
   report: { color: 'var(--cyan)', bg: '#22d3ee15', border: 'var(--cyan-dim)', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
 };
 const EAT_TIMEZONE = 'Africa/Nairobi';
+
+const getRelativeTimeLabel = (value) => {
+  if (!value) return 'just now';
+  const base = value instanceof Date ? value : new Date(value);
+  const timestamp = base.getTime();
+  if (Number.isNaN(timestamp)) return 'just now';
+  const diffSeconds = Math.max(Math.floor((Date.now() - timestamp) / 1000), 0);
+  if (diffSeconds < 10) return 'just now';
+  const units = [
+    { label: 'day', seconds: 86400 },
+    { label: 'hour', seconds: 3600 },
+    { label: 'minute', seconds: 60 },
+  ];
+  for (const unit of units) {
+    if (diffSeconds >= unit.seconds) {
+      const valueInUnit = Math.floor(diffSeconds / unit.seconds);
+      return `${valueInUnit} ${unit.label}${valueInUnit > 1 ? 's' : ''} ago`;
+    }
+  }
+  return `${diffSeconds} second${diffSeconds === 1 ? '' : 's'} ago`;
+};
+
+const buildNotificationTimeline = (appointments) => {
+  const now = Date.now();
+  const todayLabel = new Date().toLocaleDateString('en-GB', { timeZone: EAT_TIMEZONE });
+  const items = [];
+  appointments.forEach((appointment) => {
+    const createdAt = new Date(appointment.created_at || appointment.appointment_date);
+    if (Number.isNaN(createdAt.getTime())) return;
+    const timestamp = createdAt.getTime();
+    const dateLabel = createdAt.toLocaleDateString('en-GB', { timeZone: EAT_TIMEZONE });
+    const relativeTime = getRelativeTimeLabel(createdAt);
+    const staffName = appointment.staff_name || appointment.staff_member || 'Staff';
+    const fallbackMessage = [appointment.department_name, appointment.division_name, staffName]
+      .filter(Boolean)
+      .join(' · ');
+    const requestMessage = appointment.message?.trim() || fallbackMessage || 'Visitor did not leave a note.';
+
+    items.push({
+      id: `request-${appointment.id}`,
+      category: 'appointments',
+      title: `Visit request from ${appointment.visitor_name}`,
+      message: requestMessage,
+      time: relativeTime,
+      date: dateLabel === todayLabel ? 'Today' : dateLabel,
+      timestamp,
+      urgent: appointment.status === 'Pending' && now - timestamp >= 30 * 60 * 1000,
+      staff: [staffName].filter(Boolean),
+    });
+
+    if (appointment.status !== 'Pending') {
+      const responseMessage = appointment.response_note?.trim() || `${staffName} changed the request to ${appointment.status}.`;
+      items.push({
+        id: `response-${appointment.id}-${appointment.status}`,
+        category: appointment.status === 'Declined' ? 'escalation' : 'staff',
+        title: `${staffName} marked ${appointment.visitor_name}'s request as ${appointment.status}`,
+        message: responseMessage,
+        time: relativeTime,
+        date: dateLabel === todayLabel ? 'Today' : dateLabel,
+        timestamp,
+        urgent: appointment.status === 'Declined',
+        staff: [staffName].filter(Boolean),
+      });
+    }
+
+    const overdueThreshold = 30 * 60 * 1000;
+    if (appointment.status === 'Pending' && now - timestamp >= overdueThreshold) {
+      const overdueMinutes = Math.max(Math.floor((now - timestamp) / 60000), 1);
+      items.push({
+        id: `overdue-${appointment.id}`,
+        category: 'escalation',
+        title: `${appointment.visitor_name}'s request is overdue`,
+        message: `Pending for ${overdueMinutes} minute${overdueMinutes === 1 ? '' : 's'}.`,
+        time: relativeTime,
+        date: dateLabel === todayLabel ? 'Today' : dateLabel,
+        timestamp,
+        urgent: true,
+        staff: [staffName].filter(Boolean),
+      });
+    }
+  });
+
+  items.sort((a, b) => b.timestamp - a.timestamp);
+  return items.slice(0, 30);
+};
 
 function generatePassword() {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!';
@@ -123,7 +127,7 @@ export default function AdminDashboardPage() {
   const [activeNav, setActiveNav] = useState('dashboard');
   
   // Notifications state
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState([]);
   const [bellDropdownOpen, setBellDropdownOpen] = useState(false);
   const [notifFilter, setNotifFilter] = useState('all'); // all, unread, urgent, archived
   const [notifTypeFilter, setNotifTypeFilter] = useState('all'); // all, escalation, staff, appointments, security, report
@@ -221,6 +225,20 @@ export default function AdminDashboardPage() {
   const [divisions, setDivisions] = useState([]);
   const [staff, setStaff] = useState([]);
   const [allAppointments, setAllAppointments] = useState([]);
+  const derivedNotifications = useMemo(() => buildNotificationTimeline(allAppointments), [allAppointments]);
+  useEffect(() => {
+    setNotifications((prev) => {
+      const prevMap = new Map(prev.map((notif) => [notif.id, notif]));
+      const next = derivedNotifications.map((notif) => {
+        const existing = prevMap.get(notif.id);
+        return { ...notif, unread: existing ? existing.unread : true };
+      });
+      const isSame =
+        prev.length === next.length &&
+        prev.every((item, index) => item.id === next[index].id && item.unread === next[index].unread);
+      return isSame ? prev : next;
+    });
+  }, [derivedNotifications]);
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     title: '',
@@ -600,29 +618,26 @@ export default function AdminDashboardPage() {
             <strong>Admin Dashboard</strong>
           </div>
         </div>
-        <div className="topbar-right">
-          <button
-            className="shell-nav-toggle"
-            type="button"
-            aria-label="Toggle menu"
-            aria-expanded={navOpen}
-            onClick={() => setNavOpen((prev) => !prev)}
-          >
-            <span></span>
-            <span></span>
-            <span></span>
-          </button>
-          <div className="search-wrap">
-            <input className="search-bar" placeholder="Search anything..." />
-          </div>
-          <div className="topbar-icon-btn" title="Notifications" onClick={() => setBellDropdownOpen(!bellDropdownOpen)} style={{ position: 'relative' }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-            </svg>
-            {unreadCount > 0 && <div className="notif-badge">{unreadCount}</div>}
-            
-            {/* Bell Dropdown */}
+          <div className="topbar-right">
+            <button
+              className="shell-nav-toggle"
+              type="button"
+              aria-label="Toggle menu"
+              aria-expanded={navOpen}
+              onClick={() => setNavOpen((prev) => !prev)}
+            >
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
+            <div className="topbar-icon-btn" title="Notifications" onClick={() => setBellDropdownOpen(!bellDropdownOpen)} style={{ position: 'relative' }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+              </svg>
+              {unreadCount > 0 && <div className="notif-badge">{unreadCount}</div>}
+              
+              {/* Bell Dropdown */}
             {bellDropdownOpen && (
               <div className="bell-dropdown">
                 <div className="dropdown-head">
@@ -663,14 +678,8 @@ export default function AdminDashboardPage() {
               </div>
             )}
           </div>
-          <div className="topbar-icon-btn" title="Settings" onClick={() => setActiveNav('settings')}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-            </svg>
+            <div className="avatar">{getInitials(user?.full_name || 'AD')}</div>
           </div>
-          <div className="avatar">{getInitials(user?.full_name || 'AD')}</div>
-        </div>
       </header>
       <div className={`shell-backdrop ${navOpen ? 'open' : ''}`} onClick={() => setNavOpen(false)}></div>
 
@@ -1080,13 +1089,14 @@ export default function AdminDashboardPage() {
               </div>
             </div>
             <div className="table-wrap">
-              <table>
+              <table className="visit-log-table">
                 <thead>
                   <tr>
                     <th>Visitor</th>
                     <th>Staff</th>
                     <th>Department</th>
                     <th>Date</th>
+                    <th>Sent</th>
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
@@ -1094,7 +1104,7 @@ export default function AdminDashboardPage() {
                 <tbody>
                   {filteredAppointments.map((a) => (
                     <tr key={a.id}>
-                      <td>
+                      <td data-label="Visitor">
                         <div className="td-flex">
                           <div className="avatar-sm" style={{ background: 'linear-gradient(135deg, #1d4ed8, #3b82f6)', color: '#fff' }}>{getInitials(a.visitor_name)}</div>
                           <div>
@@ -1103,11 +1113,17 @@ export default function AdminDashboardPage() {
                           </div>
                         </div>
                       </td>
-                      <td><span style={{ color: 'var(--text-dim)' }}>{a.staff_name}</span></td>
-                      <td><span style={{ color: 'var(--text-dim)' }}>{a.department_name}</span></td>
-                      <td>{new Date(a.appointment_date).toLocaleString('en-GB', { timeZone: EAT_TIMEZONE })}</td>
-                      <td><StatusBadge status={a.status} /></td>
-                      <td>
+                      <td data-label="Staff"><span style={{ color: 'var(--text-dim)' }}>{a.staff_name}</span></td>
+                      <td data-label="Department"><span style={{ color: 'var(--text-dim)' }}>{a.department_name}</span></td>
+                      <td data-label="Date">{new Date(a.appointment_date).toLocaleString('en-GB', { timeZone: EAT_TIMEZONE })}</td>
+                      <td
+                        data-label="Sent"
+                        title={a.created_at ? new Date(a.created_at).toLocaleString('en-GB', { timeZone: EAT_TIMEZONE }) : ''}
+                      >
+                        Sent {getRelativeTimeLabel(a.created_at || a.appointment_date)}
+                      </td>
+                      <td data-label="Status"><StatusBadge status={a.status} /></td>
+                      <td data-label="Actions">
                         <div className="row-actions">
                           <button className="act-btn" onClick={() => { setReassignModal(a); setReassignStaff(String(a.staff_member)); }}>Reassign</button>
                           <button className="act-btn danger" onClick={() => openConfirm({

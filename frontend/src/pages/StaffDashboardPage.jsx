@@ -313,13 +313,6 @@ export default function StaffDashboardPage() {
     return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
   };
 
-  const formatSentTime = (timestamp) => {
-    if (!timestamp) return '—';
-    const date = new Date(timestamp);
-    if (Number.isNaN(date.getTime())) return '—';
-    return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
-  };
-
   const getDateLabel = () => {
     const date = new Date();
     return date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -420,7 +413,8 @@ export default function StaffDashboardPage() {
 
   const updateStatus = async (appointmentId, status) => {
     const appointment = appointments.find((item) => item.id === appointmentId);
-    const note = responseNote[appointmentId] || '';
+  const fallbackName = appointment?.visitor_name || 'Visitor';
+  const note = (responseNote[appointmentId] || '').trim() || `${fallbackName} status set to ${status}.`;
 
     await updateAppointment(appointmentId, {
       status,
@@ -1082,51 +1076,35 @@ export default function StaffDashboardPage() {
                       <button type="button" className="sd-list-back" onClick={() => setViewMode('grid')}>Return to grid</button>
                       <span className="sd-list-count">{filteredAppointments.length} requests</span>
                     </div>
-                    <div className="sd-list-items">
-                      {filteredAppointments.map((apt) => (
-                        <div key={apt.id} className="sd-list-simple-card">
+                    <div className="sd-appointments-list">
+                      {filteredAppointments.map((apt) => {
+                        const sentTimestamp = apt.created_at || apt.appointment_date;
+                        const sentLabel = getRelativeTimeLabel(sentTimestamp);
+                        const sentTitle = sentTimestamp ? new Date(sentTimestamp).toLocaleString('en-GB') : '';
+                        const statusKey = (apt.status || 'pending').toLowerCase();
+                        return (
                           <button
                             type="button"
-                            className="sd-list-simple"
+                            key={apt.id}
+                            className="sd-appointments-list-card"
                             onClick={() => openPreview(apt)}
                           >
-                            <div>
-                              <div className="sd-list-simple-name">{apt.visitor_name}</div>
-                              <div className="sd-list-simple-time">Sent {getRelativeTimeLabel(apt.created_at)}</div>
+                            <div className="sd-appointments-list-main">
+                              <div>
+                                <div className="sd-appointments-list-name">{apt.visitor_name}</div>
+                                <div className="sd-appointments-list-time" title={sentTitle}>
+                                  Sent {sentLabel}
+                                </div>
+                              </div>
+                              <span className={`sd-list-simple-status sd-list-simple-status-${statusKey}`}>{apt.status}</span>
                             </div>
-                            <div className="sd-list-simple-meta-group">
-                              <span className={`sd-list-simple-status sd-list-simple-status-${apt.status?.toLowerCase()}`}>{apt.status}</span>
-                              <span className="sd-list-simple-meta">{formatSentTime(apt.created_at || apt.appointment_date)}</span>
+                            <div className="sd-appointments-list-meta">
+                              <span>{apt.department_name || 'General'}</span>
+                              <span>{apt.appointment_date ? new Date(apt.appointment_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }) : ''}</span>
                             </div>
                           </button>
-                          <div className="sd-list-simple-actions">
-                            <button className="sd-btn sd-btn-accept" onClick={() => openResponseArea(apt.id, 'Accepted')}>Accept</button>
-                            <button className="sd-btn sd-btn-reschedule" onClick={() => openResponseArea(apt.id, 'Rescheduled')}>Reschedule</button>
-                            <button className="sd-btn sd-btn-decline" onClick={() => openResponseArea(apt.id, 'Declined')}>Decline</button>
-                          </div>
-                          {responseAreaOpen[apt.id] && (
-                            <div className="sd-response-area sd-response-area-list">
-                              <textarea
-                                placeholder="Add a response note..."
-                                value={responseNote[apt.id] || ''}
-                                onChange={(e) => setResponseNote(prev => ({ ...prev, [apt.id]: e.target.value }))}
-                                rows="2"
-                              />
-                              <div className="sd-response-actions sd-response-actions-list">
-                                <button
-                                  className="sd-btn sd-btn-accept"
-                                  onClick={() => {
-                                    requestStatusUpdate(apt.id, apt.visitor_name, responseAction[apt.id] || 'Accepted');
-                                  }}
-                                >
-                                  Send & {responseAction[apt.id] || 'Accept'}
-                                </button>
-                                <button className="sd-btn sd-btn-view" onClick={() => closeResponseArea(apt.id)}>Cancel</button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -1258,7 +1236,7 @@ export default function StaffDashboardPage() {
                 <h5>Response note (optional)</h5>
                 <textarea
                   className="sd-modal-response-input"
-                  placeholder="Write a short note for the visitor..."
+                  placeholder="Add a brief response note (optional)..."
                   value={responseNote[previewItem.id] || ''}
                   onChange={(e) => setResponseNote((prev) => ({ ...prev, [previewItem.id]: e.target.value }))}
                   rows="3"
