@@ -1,5 +1,4 @@
 import logging
-import threading
 
 from rest_framework import generics, permissions
 from rest_framework.response import Response
@@ -24,8 +23,30 @@ def _format_local_time(dt):
     return timezone.localtime(dt).strftime("%b %d, %Y at %I:%M %p")
 
 
+def _get_visit_message(appointment):
+    now = timezone.now()
+    diff = appointment.appointment_date - now
+    minutes = diff.total_seconds() / 60
+
+    if minutes <= 5:
+        return (
+            f"{appointment.visitor_name} is at reception RIGHT NOW waiting to see you."
+        )
+
+    if minutes <= 65:
+        eta = max(1, int(minutes))
+        return (
+            f"{appointment.visitor_name} is on their way and will arrive in approximately {eta} minute"
+            f"{'s' if eta != 1 else ''}."
+        )
+
+    formatted = _format_local_time(appointment.appointment_date)
+    return f"{appointment.visitor_name} has a scheduled visit on {formatted}."
+
+
 def _notify_new_appointment(appointment):
     logger.info(f'Starting notification for appointment_id={appointment.id}, staff_member={appointment.staff_member}')
+    body = _get_visit_message(appointment)
     
     try:
         staff_email = appointment.staff_member.email
@@ -67,7 +88,7 @@ def _notify_new_appointment(appointment):
             push_result = send_fcm_push_notification(
                 fcm_token=token,
                 title='Visitor Waiting',
-                body=f'You have a visitor: {appointment.visitor_name} is here for you',
+                body=body,
             )
             if push_result.get('sent'):
                 sent_count += 1
@@ -188,6 +209,7 @@ class AppointmentCreateView(generics.CreateAPIView):
             logger.exception('Failed to send appointment email: %s', str(e))
             self._email_result = {'sent': False, 'reason': str(e)[:100]}
         
+        notification_message = _get_visit_message(appointment)
         # Send push notification
         try:
             token_set = set(
@@ -197,11 +219,10 @@ class AppointmentCreateView(generics.CreateAPIView):
                 token_set.add(appointment.staff_member.fcm_token)
 
             if token_set:
-                local_appt_time = timezone.localtime(appointment.appointment_date).strftime('%b %d, %Y at %I:%M %p')
                 push_result = send_fcm_push_notification(
                     fcm_token=list(token_set)[0],  # Send to first token
                     title='Visitor Waiting',
-                    body=f'You have a visitor: {appointment.visitor_name} is here for you',
+                    body=notification_message,
                 )
                 self._push_result = push_result
         except Exception as e:
@@ -214,9 +235,7 @@ class AppointmentCreateView(generics.CreateAPIView):
                 send_staff_sms(
                     phone_number=staff_phone,
                     staff_name=appointment.staff_member.full_name or appointment.staff_member.email,
-                    visitor_name=appointment.visitor_name,
-                    visitor_email=appointment.visitor_email,
-                    purpose=appointment.message or 'Not specified',
+                    message=notification_message,
                 )
         except Exception:
             logger.exception('Failed to send staff SMS for appointment_id=%s', appointment.id)

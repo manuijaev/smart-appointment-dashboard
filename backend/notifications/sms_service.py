@@ -92,15 +92,11 @@ def send_visitor_sms(phone_number, visitor_name, staff_name, status, response_no
     return send_sms(phone_number, message)
 
 
-def send_staff_sms(phone_number, staff_name, visitor_name, visitor_email, purpose):
+def send_staff_sms(phone_number, staff_name, message):
     """Send alert to staff when a visitor checks in."""
-    print(f"Staff SMS CALLED — phone: {phone_number}, visitor: {visitor_name}")
+    print(f"Staff SMS CALLED — phone: {phone_number}, staff: {staff_name}")
 
-    message = (
-        f"Hi {staff_name}, you have a visitor: {visitor_name} "
-        f"({visitor_email}). Purpose: {purpose}. "
-        f"Please respond on your dashboard."
-    )
+    final_message = f"Hi {staff_name}, {message}"
 
-    message = message[:160]
-    return send_sms(phone_number, message)
+    final_message = final_message[:160]
+    return send_sms(phone_number, final_message)

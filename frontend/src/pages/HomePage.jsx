@@ -156,6 +156,18 @@ const HERO_TYPEWRITER_LINES = [
   { text: 'We will handle the rest.', variant: 'line2' },
 ];
 
+const VISIT_TYPE_OPTIONS = [
+  { value: 'now', label: 'I am here now', description: 'Let reception know you are waiting at the desk.', icon: ICONS.checkCircle },
+  { value: 'onway', label: 'I am on my way', description: 'Share an estimated arrival so your host can prepare.', icon: ICONS.arrowRight },
+  { value: 'scheduled', label: 'I have a scheduled visit', description: 'Pick a future check-in time within office hours (8 AM - 5 PM EAT).', icon: ICONS.calendar },
+];
+
+const ETA_OPTIONS = [
+  { label: '15 minutes', minutes: 15 },
+  { label: '30 minutes', minutes: 30 },
+  { label: '1 hour', minutes: 60 },
+];
+
 export default function HomePage() {
   const EAT_TIMEZONE = 'Africa/Nairobi';
   const STAFF_UNAVAILABLE_STORAGE_KEY = 'staff_unavailable_by_date';
@@ -187,8 +199,12 @@ export default function HomePage() {
     division: '',
     staff_member: '',
     appointment_date: '',
+    visit_type: 'scheduled',
+    eta_minutes: 30,
     message: '',
   });
+  const [visitType, setVisitType] = useState('scheduled');
+  const [etaMinutes, setEtaMinutes] = useState(30);
   const [validation, setValidation] = useState({
     nameValid: false,
     emailValid: false,
@@ -316,6 +332,70 @@ export default function HomePage() {
     heroRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  const getEATNow = () => new Date(new Date().toLocaleString('en-US', { timeZone: EAT_TIMEZONE }));
+
+  const buildArrivalValue = (offsetMinutes = 0) => {
+    const base = getEATNow();
+    return new Date(base.getTime() + offsetMinutes * 60 * 1000).toISOString();
+  };
+
+  const updateAppointmentDateValue = (value, type = visitType, extra = {}) => {
+    setFormData((prev) => ({
+      ...prev,
+      appointment_date: value,
+      visit_type: type,
+      ...extra,
+    }));
+
+    if (!value) {
+      setValidation((prev) => ({ ...prev, dateValid: false, dateError: false }));
+      return;
+    }
+
+    if (type === 'scheduled') {
+      const selected = new Date(value);
+      if (Number.isNaN(selected.getTime())) {
+        setValidation((prev) => ({ ...prev, dateValid: false, dateError: true }));
+        return;
+      }
+      const now = getEATNow();
+      const selectedHours = selected.getHours();
+      const isOfficeHours = selectedHours >= 8 && selectedHours < 17;
+      if (formData.staff_member && isStaffUnavailableOnDate(formData.staff_member, value)) {
+        showToastMessage('This staff member is unavailable on that date. Please choose another date.');
+      }
+      setValidation((prev) => ({
+        ...prev,
+        dateValid: selected > now && isOfficeHours,
+        dateError: selected <= now || !isOfficeHours,
+      }));
+    } else {
+      setValidation((prev) => ({ ...prev, dateValid: true, dateError: false }));
+    }
+  };
+
+  const handleVisitTypeChange = (type) => {
+    if (visitType === type && type === 'scheduled') {
+      updateAppointmentDateValue(formData.appointment_date || '', 'scheduled');
+      return;
+    }
+    setVisitType(type);
+    if (type === 'now') {
+      updateAppointmentDateValue(buildArrivalValue(0), 'now');
+      return;
+    }
+    if (type === 'onway') {
+      updateAppointmentDateValue(buildArrivalValue(etaMinutes), 'onway', { eta_minutes: etaMinutes });
+      return;
+    }
+    updateAppointmentDateValue(formData.appointment_date || '', 'scheduled');
+  };
+
+  const handleEtaOptionChange = (minutes) => {
+    setEtaMinutes(minutes);
+    updateAppointmentDateValue(buildArrivalValue(minutes), 'onway', { eta_minutes: minutes });
+  };
+
   const revealMobileHeroForm = () => {
     setIsHeroFormVisible(true);
     scrollToHero();
@@ -359,46 +439,26 @@ export default function HomePage() {
   };
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => {
-      const next = { ...prev, [field]: value };
-      if (field === 'appointment_date' && prev.staff_member && isStaffUnavailableOnDate(prev.staff_member, value)) {
-        next.staff_member = '';
-      }
-      return next;
-    });
+    if (field === 'appointment_date') {
+      setVisitType('scheduled');
+      updateAppointmentDateValue(value, 'scheduled');
+      return;
+    }
 
+    setFormData(prev => ({ ...prev, [field]: value }));
     if (['department', 'division', 'staff_member'].includes(field)) {
       setPrefillSelection(null);
     }
-    
+
     if (field === 'visitor_name') {
-      setValidation(prev => ({ ...prev, nameValid: value.length > 2 }));
+      setValidation((prev) => ({ ...prev, nameValid: value.length > 2 }));
     }
     if (field === 'visitor_email') {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      setValidation(prev => ({ 
-        ...prev, 
+      setValidation((prev) => ({
+        ...prev,
         emailValid: emailRegex.test(value),
-        emailError: value.length > 3 && !emailRegex.test(value)
-      }));
-    }
-    if (field === 'appointment_date') {
-      const selected = new Date(value);
-      // Use EAT timezone for validation
-      const now = new Date(new Date().toLocaleString('en-US', { timeZone: EAT_TIMEZONE }));
-      const eatNow = new Date(now.getTime() + 3 * 60 * 60 * 1000); // UTC+3 for EAT
-      
-      // Check if selected time is within office hours (8 AM - 5 PM EAT)
-      const selectedHours = selected.getHours();
-      const isOfficeHours = selectedHours >= 8 && selectedHours < 17;
-      
-      if (formData.staff_member && isStaffUnavailableOnDate(formData.staff_member, value)) {
-        showToastMessage('This staff member is unavailable on that date. Please choose another date.');
-      }
-      setValidation(prev => ({ 
-        ...prev, 
-        dateValid: selected > now && isOfficeHours,
-        dateError: (selected <= now || !isOfficeHours) && value.length > 0
+        emailError: value.length > 3 && !emailRegex.test(value),
       }));
     }
   };
@@ -409,7 +469,7 @@ export default function HomePage() {
     if (step > currentStep) {
       if (currentStep === 1 && !validation.nameValid) return;
       if (currentStep === 2 && !validation.emailValid) return;
-      if (currentStep === 6 && (!formData.appointment_date || !validation.dateValid || isNextDaySelection(formData.appointment_date))) return;
+      if (currentStep === 6 && !isVisitStepReady()) return;
     }
     
     setCurrentStep(step);
@@ -494,8 +554,12 @@ export default function HomePage() {
       division: '',
       staff_member: '',
       appointment_date: '',
+      visit_type: 'scheduled',
+      eta_minutes: 30,
       message: '',
     });
+    setVisitType('scheduled');
+    setEtaMinutes(30);
     setValidation({
       nameValid: false,
       emailValid: false,
@@ -556,6 +620,22 @@ export default function HomePage() {
     });
   };
 
+  const getVisitTypeLabel = () => {
+    if (visitType === 'now') return 'Here now';
+    if (visitType === 'onway') return 'On my way';
+    return 'Scheduled visit';
+  };
+
+  const getArrivalLabel = () => {
+    if (!formData.appointment_date) return 'TBC';
+    if (visitType === 'now') return 'Now (walk-in)';
+    if (visitType === 'onway') {
+      const minutesLabel = etaMinutes ? `${etaMinutes} minute${etaMinutes === 1 ? '' : 's'}` : 'soon';
+      return `In ${minutesLabel} · ${formatDateShort(formData.appointment_date)}`;
+    }
+    return formatDateShort(formData.appointment_date);
+  };
+
   // Check if selected date is more than 30 days in advance (next day selection)
   const isNextDaySelection = (dateStr) => {
     if (!dateStr) return false;
@@ -565,6 +645,77 @@ export default function HomePage() {
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
     return selected > thirtyDaysFromNow;
   };
+
+  const isVisitStepReady = () => {
+    if (!formData.appointment_date) return false;
+    if (visitType === 'scheduled') {
+      return validation.dateValid && !isNextDaySelection(formData.appointment_date);
+    }
+    return true;
+  };
+
+  const renderVisitStepBody = () => (
+    <>
+      <div className="visit-type-grid">
+        {VISIT_TYPE_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={`visit-option ${visitType === option.value ? 'is-active' : ''}`}
+            onClick={() => handleVisitTypeChange(option.value)}
+          >
+            <span className="visit-option-icon icon" aria-hidden="true">
+              {option.icon}
+            </span>
+            <div className="visit-option-label">{option.label}</div>
+            <div className="visit-option-desc">{option.description}</div>
+          </button>
+        ))}
+      </div>
+      {visitType === 'onway' && (
+        <div className="eta-group">
+          <div className="eta-label">Arriving in</div>
+          <div className="eta-options">
+            {ETA_OPTIONS.map((item) => (
+              <button
+                key={item.minutes}
+                type="button"
+                className={`eta-option ${etaMinutes === item.minutes ? 'is-active' : ''}`}
+                onClick={() => handleEtaOptionChange(item.minutes)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {visitType === 'scheduled' && (
+        <div className="field">
+          <label className="field-label">
+            Scheduled arrival time <span className="field-required">*</span> (EAT Timezone)
+          </label>
+          <input
+            type="datetime-local"
+            className={`field-input ${validation.dateValid ? 'valid' : ''} ${validation.dateError ? 'error' : ''}`}
+            value={formData.appointment_date}
+            onChange={(e) => handleInputChange('appointment_date', e.target.value)}
+            min={new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 16)}
+            max={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16)}
+          />
+          <div className={`field-hint ${validation.dateValid ? 'field-valid-msg' : ''} ${validation.dateError ? 'field-error' : ''}`}>
+            {validation.dateValid
+              ? formatDate(formData.appointment_date)
+              : 'Select a future time between 8 AM and 5 PM EAT.'
+            }
+          </div>
+        </div>
+      )}
+      <div className="info-box">
+        <span className="icon" aria-hidden="true">{ICONS.bell}</span>
+        <span>Choose the option that best matches your visit so reception can notify your host with the right context.</span>
+      </div>
+    </>
+  );
 
   const getInitials = (firstName, lastName) => {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
@@ -1143,35 +1294,16 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* Step 6: Arrival */}
+                {/* Step 6: Visit type */}
                 <div className={`step-view ${currentStep === 6 ? 'active' : ''}`} id="step6">
-                  <div className="step-label">Step 6 of 7 - Expected arrival time</div>
-                  <div className="field">
-                    <label className="field-label">Expected arrival time <span className="field-required">*</span> (EAT Timezone)</label>
-                    <input 
-                      type="datetime-local" 
-                      className={`field-input ${validation.dateValid ? 'valid' : ''} ${validation.dateError ? 'error' : ''}`}
-                      value={formData.appointment_date}
-                      onChange={(e) => handleInputChange('appointment_date', e.target.value)}
-                      min={new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 16)}
-                      max={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16)}
-                    />
-                    <div className={`field-hint ${validation.dateValid ? 'field-valid-msg' : ''} ${validation.dateError ? 'field-error' : ''}`}>
-                      {validation.dateValid
-                        ? formatDate(formData.appointment_date)
-                        : 'Leave blank if you are already on site.'
-                      }
-                    </div>
-                  </div>
-                  <div className="info-box">
-                    Prefer a future arrival? Choose within office hours (8 AM - 5 PM EAT) so we can badge your host. If you are already waiting, leave this blank and reception will note your walk-in.
-                  </div>
+                  <div className="step-label">Step 6 of 7 - When are you visiting?</div>
+                  {renderVisitStepBody()}
                   <div className="step-nav">
                     <button className="step-btn step-back" onClick={() => goToStep(5)}>Back</button>
                     <button 
                       className="step-btn step-next" 
-                      onClick={() => validation.dateValid && goToStep(7)}
-                      disabled={!validation.dateValid}
+                      onClick={() => isVisitStepReady() && goToStep(7)}
+                      disabled={!isVisitStepReady()}
                     >
                       Continue
                     </button>
@@ -1199,8 +1331,12 @@ export default function HomePage() {
                         <strong>{getStaffName(formData.staff_member)}</strong>
                       </div>
                       <div className="summary-row">
-                        <span className="summary-label">Date & Time</span>
-                        <strong>{formatDateShort(formData.appointment_date)}</strong>
+                        <span className="summary-label">Visit type</span>
+                        <strong>{getVisitTypeLabel()}</strong>
+                      </div>
+                      <div className="summary-row">
+                        <span className="summary-label">Arrival</span>
+                        <strong>{getArrivalLabel()}</strong>
                       </div>
                     </div>
                   </div>
@@ -1265,8 +1401,12 @@ export default function HomePage() {
                     <span className="sd-value">{getDeptName(formData.department)}</span>
                   </div>
                   <div className="sd-row">
-                    <span className="sd-label">Requested Date</span>
-                    <span className="sd-value">{formatDate(formData.appointment_date)}</span>
+                    <span className="sd-label">Visit type</span>
+                    <span className="sd-value">{getVisitTypeLabel()}</span>
+                  </div>
+                  <div className="sd-row">
+                    <span className="sd-label">Arrival time</span>
+                    <span className="sd-value">{getArrivalLabel()}</span>
                   </div>
                   <div className="sd-row">
                     <span className="sd-label">Status</span>
@@ -1734,19 +1874,10 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {/* Step 6: Date */}
+                  {/* Step 6: Visit type */}
                   <div className={`step-view ${currentStep === 6 ? 'active' : ''}`} id="step6">
-                    <div className="step-label">Step 6 of 7 - Expected arrival time</div>
-                    <div className="field">
-                      <label className="field-label">Expected arrival time <span className="field-required">*</span></label>
-                      <input 
-                        type="datetime-local" 
-                        className={`field-input ${validation.dateValid ? 'valid' : ''} ${validation.dateError ? 'error' : ''}`}
-                        value={formData.appointment_date}
-                        onChange={(e) => handleInputChange('appointment_date', e.target.value)}
-                      />
-                      <div className="field-hint">Leave blank if you're already here</div>
-                    </div>
+                    <div className="step-label">Step 6 of 7 - When are you visiting?</div>
+                    {renderVisitStepBody()}
                   </div>
 
                   {/* Step 7: Message */}
@@ -1772,7 +1903,8 @@ export default function HomePage() {
                       <div className="summary-row"><span>Department:</span> <strong>{getDeptNameFromId(formData.department) || '-'}</strong></div>
                       <div className="summary-row"><span>Division:</span> <strong>{getDivisionNameFromId(formData.division) || 'All'}</strong></div>
                       <div className="summary-row"><span>Staff:</span> <strong>{getStaffNameFromId(formData.staff_member) || '-'}</strong></div>
-                      <div className="summary-row"><span>Date:</span> <strong>{formData.appointment_date ? new Date(formData.appointment_date).toLocaleString() : '-'}</strong></div>
+                      <div className="summary-row"><span>Visit type:</span> <strong>{getVisitTypeLabel()}</strong></div>
+                      <div className="summary-row"><span>Arrival:</span> <strong>{getArrivalLabel()}</strong></div>
                     </div>
                   </div>
 
@@ -1796,8 +1928,8 @@ export default function HomePage() {
                             showToastMessage('Please enter a valid email');
                             return;
                           }
-                          if (currentStep === 6 && (!formData.appointment_date || !validation.dateValid || isNextDaySelection(formData.appointment_date))) {
-                            showToastMessage('Please select a valid date');
+                          if (currentStep === 6 && !isVisitStepReady()) {
+                            showToastMessage('Please confirm how you are arriving so reception can notify your host.');
                             return;
                           }
                           setCurrentStep(currentStep + 1);
@@ -1853,8 +1985,12 @@ export default function HomePage() {
                           division: '',
                           staff_member: '',
                           appointment_date: '',
+                          visit_type: 'scheduled',
+                          eta_minutes: 30,
                           message: '',
                         });
+                        setVisitType('scheduled');
+                        setEtaMinutes(30);
                         setPrefillSelection(null);
                       }}
                     >
@@ -1874,8 +2010,12 @@ export default function HomePage() {
                           division: '',
                           staff_member: '',
                           appointment_date: '',
+                          visit_type: 'scheduled',
+                          eta_minutes: 30,
                           message: '',
                         });
+                        setVisitType('scheduled');
+                        setEtaMinutes(30);
                         setPrefillSelection(null);
                       }}
                     >
