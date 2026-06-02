@@ -34,6 +34,12 @@ class StaffRegisterSerializer(serializers.ModelSerializer):
         division = attrs.get('division')
         if department and division and division.department_id != department.id:
             raise serializers.ValidationError({'division': 'Selected division does not belong to this department.'})
+        
+        # Only allow admin registration if no admin exists yet
+        role = attrs.get('role', User.Role.STAFF)
+        if role == User.Role.ADMIN and User.objects.filter(role=User.Role.ADMIN).exists():
+            raise serializers.ValidationError({'role': 'Admin registration is disabled. An admin account already exists.'})
+        
         return attrs
 
     def create(self, validated_data):

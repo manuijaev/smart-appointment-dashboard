@@ -3,6 +3,7 @@ import HomePage from './pages/HomePage';
 import StaffLoginPage from './pages/StaffLoginPage';
 import StaffDashboardPage from './pages/StaffDashboardPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import AdminSignupPage from './pages/AdminSignupPage';
 import { useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 
@@ -40,6 +41,14 @@ export default function App() {
           element={
             <PublicOnlyRoute>
               <StaffLoginPage />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/admin/signup"
+          element={
+            <PublicOnlyRoute>
+              <AdminSignupPage />
             </PublicOnlyRoute>
           }
         />

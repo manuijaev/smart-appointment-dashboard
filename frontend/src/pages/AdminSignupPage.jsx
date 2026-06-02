@@ -17,12 +17,28 @@ export default function AdminSignupPage() {
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [adminExists, setAdminExists] = useState(false);
+  const [checkingAdmin, setCheckingAdmin] = useState(true);
 
   useEffect(() => {
     document.body.classList.add('auth-background');
     return () => {
       document.body.classList.remove('auth-background');
     };
+  }, []);
+
+  useEffect(() => {
+    // Check if an admin already exists
+    api.get('/staff/')
+      .then(({ data }) => {
+        const hasAdmin = data.some(s => s.role === 'Admin');
+        setAdminExists(hasAdmin);
+      })
+      .catch(() => {
+        // If we can't check, assume no admin exists to allow registration
+        setAdminExists(false);
+      })
+      .finally(() => setCheckingAdmin(false));
   }, []);
 
   const onChange = (e) => {
@@ -68,6 +84,48 @@ export default function AdminSignupPage() {
       setIsAuthenticating(false);
     }
   };
+
+  if (checkingAdmin) {
+    return (
+      <div className="container">
+        <div className="auth-shell">
+          <div className="auth-wrap">
+            <p style={{ padding: '2rem' }}>Checking system status...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (adminExists) {
+    return (
+      <div className="container">
+        <div className="auth-shell">
+          <div className="auth-wrap">
+            <section className="auth-hero admin-control-hero">
+              <span className="auth-badge">Admin Onboarding</span>
+              <h2>Admin Registration Closed</h2>
+              <p>
+                An admin account already exists. Please use the staff login page to access your account.
+              </p>
+            </section>
+            <section className="auth-panel">
+              <div className="hero">
+                <h1>Admin Sign Up</h1>
+              </div>
+              <p className="page-subtitle">Admin registration is disabled because an admin account already exists.</p>
+              <div className="auth-mini-links">
+                <span>Already have admin credentials?</span>
+                <Link to="/staff/login" className="auth-text-link">
+                  Go to Staff Login
+                </Link>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container">

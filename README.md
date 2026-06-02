@@ -11,16 +11,20 @@ A modern Progressive Web App that guides visitors through a multi-step appointme
    - [Staff Workspace](#staff-workspace)
    - [Admin Control Center](#admin-control-center)
 4. [Technology Stack](#technology-stack)
-5. [Data Models & API Contracts](#data-models--api-contracts)
-6. [Notifications & Communication](#notifications--communication)
-7. [Security & Authorization](#security--authorization)
-8. [Developer Setup](#developer-setup)
+5. [Visual Design System](#visual-design-system)
+   - [Color Palette](#color-palette)
+   - [Animations & Motions](#animations--motions)
+   - [Visual Effects](#visual-effects)
+6. [Data Models & API Contracts](#data-models--api-contracts)
+7. [Notifications & Communication](#notifications--communication)
+8. [Security & Authorization](#security--authorization)
+9. [Developer Setup](#developer-setup)
    - [Backend](#backend)
    - [Frontend](#frontend)
-9. [Testing & Quality](#testing--quality)
-10. [Operational Considerations](#operational-considerations)
-11. [Troubleshooting & FAQs](#troubleshooting--faqs)
-12. [Contribution Guidelines](#contribution-guidelines)
+10. [Testing & Quality](#testing--quality)
+11. [Operational Considerations](#operational-considerations)
+12. [Troubleshooting & FAQs](#troubleshooting--faqs)
+13. [Contribution Guidelines](#contribution-guidelines)
 
 ---
 
@@ -74,7 +78,7 @@ Visitors traverse a guided 7-step form that enforces validation before moving to
 | 6 | Appointment Date & Time | Scheduling | Required, future date/time; rejects past dates
 | 7 | Note | Optional context | Text area (max 600 chars) for visitor message
 
-- Each step shows progress with a header/badge and prevents rollback without explicit “Back” clicks
+- Each step shows progress with a header/badge and prevents rollback without explicit "Back" clicks
 - On submit, an animation confirms delivery and invites another request
 - Visitors see automated emails that summarize their request and eventual staff response (accept/reschedule/decline)
 
@@ -82,7 +86,7 @@ Visitors traverse a guided 7-step form that enforces validation before moving to
 
 Accessible at `/staff/login` and `/staff/dashboard`, staff see:
 
-- **Profile + availability**: Displays name, avatar initials, department/division, and a toggle for “Available / Busy” status
+- **Profile + availability**: Displays name, avatar initials, department/division, and a toggle for "Available / Busy" status
 - **Stats overview**: Pending appointment count, total responses this week, acceptance ratio, and current session time remaining
 - **Tabbed list**: Pending, Accepted, Declined, All (with color-coded badges and overdue chips for pending requests older than 24 hours)
 - **Search bar**: Type-ahead filtering on visitor name, email, or service
@@ -121,7 +125,7 @@ The admin dashboard (`/admin/login`, `/admin/dashboard`) is where organizational
 #### Analytics & Notifications
 
 - Metric cards: total appointments, pending, accepted, declined, monthly bookings, active staff count
-- Notification bell with unread counts, dropdown preview, and “mark all as read” action
+- Notification bell with unread counts, dropdown preview, and "mark all as read" action
 - Full notifications page with filters (All, Unread, Appointment, Staff) and timestamps
 
 #### Security
@@ -136,15 +140,145 @@ The admin dashboard (`/admin/login`, `/admin/dashboard`) is where organizational
 
 | Area | Technology | Notes |
 |------|------------|-------|
-| Backend Framework | Django 4.x (Python) | Django REST Framework, Celery-ready settings, custom user model
-| API Layer | Django REST Framework | ViewSets + serializers, JWT auth via `djangorestframework-simplejwt`
-| Database | PostgreSQL | Configurable via env vars, migrations managed through Django
-| Frontend | React 18, Vite | Vite dev server, React Router v6, Context API for state
-| API Client | Axios | Central `services/` folder with interceptors and JWT refresh
-| Auth | JWT + Refresh | Access tokens in `localStorage`, refresh handled transparently
-| Notifications | EmailJS, Firebase Cloud Messaging | Email templates stored in `frontend/services/emailjs`, FCM tokens stored per-user
-| PWA | Service worker + manifest | Custom caching strategies inside `public/sw.js` and `manifest.json`
-| Styling | CSS Modules / global styles | Modular components with BEM-alike naming conventions
+| Backend Framework | Django 4.x (Python) | Django REST Framework, Celery-ready settings, custom user model |
+| API Layer | Django REST Framework | ViewSets + serializers, JWT auth via `djangorestframework-simplejwt` |
+| Database | PostgreSQL | Configurable via env vars, migrations managed through Django |
+| Frontend | React 18, Vite | Vite dev server, React Router v6, Context API for state |
+| API Client | Axios | Central `services/` folder with interceptors and JWT refresh |
+| Auth | JWT + Refresh | Access tokens in `localStorage`, refresh handled transparently |
+| Notifications | EmailJS, Firebase Cloud Messaging | Email templates stored in `frontend/services/emailjs`, FCM tokens stored per-user |
+| PWA | Service worker + manifest | Custom caching strategies inside `public/sw.js` and `manifest.json` |
+| Styling | CSS Modules / global styles | Modular components with BEM-alike naming conventions |
+
+---
+
+## Visual Design System
+
+### Color Palette
+
+The application uses a carefully crafted color system with CSS custom properties for consistent theming across all pages.
+
+#### Dark Theme (Default)
+
+| Variable | Value | Usage |
+|---------|-------|-------|
+| `--bg` | `#050505` | Primary background |
+| `--bg-soft` | `#101010` | Secondary background areas |
+| `--surface` | `rgba(255, 255, 255, 0.06)` | Card backgrounds |
+| `--surface-hover` | `rgba(255, 255, 255, 0.1)` | Interactive hover states |
+| `--line` | `rgba(255, 255, 255, 0.15)` | Borders and dividers |
+| `--text` | `#f7f7f8` | Primary text |
+| `--muted` | `#b8bcc2` | Secondary/muted text |
+| `--button` | `#8e949e` | Default button state |
+| `--button-hover` | `#a2a8b1` | Button hover state |
+| `--button-text` | `#0a0a0a` | Button text |
+| `--danger` | `#da4b4b` | Error/danger states |
+| `--danger-hover` | `#f26262` | Danger hover state |
+
+#### Light Theme (Home & Staff Dashboard)
+
+| Variable | Value | Usage |
+|---------|-------|-------|
+| `--ink` | `#1a1714` | Primary text on light backgrounds |
+| `--ink-mid` | `#3d3832` | Secondary text |
+| `--ink-light` | `#6b6560` | Muted text |
+| `--ink-faint` | `#a39d96` | Faint/disabled text |
+| `--gold` | `#c9922a` | Accent color (buttons, highlights) |
+| `--gold-light` | `#fdf3e3` | Gold tint backgrounds |
+| `--gold-mid` | `#e8b96a` | Gold intermediate |
+| `--gold-dark` | `#8a6018` | Gold dark variant |
+| `--teal` | `#1a7a72` | Success/positive actions |
+| `--teal-light` | `#e6f4f2` | Teal tint backgrounds |
+| `--teal-mid` | `#4aada4` | Teal intermediate |
+| `--red` | `#c0392b` | Error states |
+| `--red-light` | `#fdecea` | Red tint backgrounds |
+| `--red-mid` | `#e74c3c` | Red intermediate |
+| `--red-dark` | `#922b21` | Red dark variant |
+| `--green` | `#1e7e4a` | Success/confirmation |
+| `--green-light` | `#e8f5ee` | Green tint backgrounds |
+| `--green-mid` | `#3da86a` | Green intermediate |
+| `--green-dark` | `#156534` | Green dark variant |
+
+#### Status Colors
+
+| Status | Color | CSS Variable |
+|--------|-------|--------------|
+| Pending | Amber | `--amber: #c9922a` |
+| Accepted | Green | `--green: #1e7e4a` |
+| Declined | Red | `--red: #c0392b` |
+| Rescheduled | Teal | `--teal: #1a7a72` |
+
+### Animations & Motions
+
+The application features smooth, purposeful animations that enhance the user experience without being distracting.
+
+#### Page Transitions
+
+| Animation | Duration | Description |
+|-----------|----------|-------------|
+| `heroFade` | 0.6s | Hero section entrance animation |
+| `cardIn` | 0.55s | Staggered card entrance with fade and slide |
+| `authIn` | 0.6s | Authentication panel entrance |
+| `heroFloat` | 6s infinite | Subtle floating animation for hero elements |
+| `riseIn` | 0.35s | Modal and panel rise-in effect |
+| `fadeUp` | 0.3s-0.5s | Content fade-up for lists and sections |
+
+#### Interactive Animations
+
+| Animation | Trigger | Description |
+|-----------|---------|-------------|
+| `nav-link` hover | Hover | Translate Y(-2px) with glow effect |
+| `card` hover | Hover | Enhanced shadow and border transition |
+| `confirmPulse` | Click | Button press feedback |
+| `badgePop` | New notification | Notification badge pop-in |
+| `slideIn` | Sidebar/modal | Horizontal slide for drawers |
+| `slideUp` | Toast | Toast notification entrance |
+| `pulse` | Status indicator | Breathing pulse for active states |
+| `homeSubmitPulse` | Form submit | Submit button loading pulse |
+| `homeIconPop` | Success state | Checkmark icon pop animation |
+| `availabilityPulseHeader` | Availability toggle | Header pulse when available |
+
+#### Loading & Feedback Animations
+
+| Animation | Usage |
+|-----------|-------|
+| `dotBlink` | Loading indicator dots |
+| `drawCircle` | SVG circle drawing effect |
+| `drawCheck` | SVG checkmark drawing |
+| `homeLoadingDots` | Step loading dots |
+| `heroCursor` | Typing cursor blink |
+| `homeBlink` | Status indicator pulse |
+
+### Visual Effects
+
+#### Background Effects
+
+- **Radial Gradients**: Subtle light spots create depth on dark backgrounds
+- **Linear Gradients**: Smooth color transitions for hero sections
+- **Blur Filters**: Background images use 2.2-2.5px blur for depth
+- **Overlay Gradients**: Dark overlays on background images for text readability
+- **SVG Patterns**: Subtle dot patterns for texture without distraction
+
+#### Glassmorphism
+
+- **Backdrop Filters**: `blur(8px)` to `blur(16px)` for frosted glass effect
+- **Translucent Surfaces**: `rgba(255, 255, 255, 0.06)` to `rgba(255, 255, 255, 0.09)` for cards
+- **Border Highlights**: Subtle borders with `rgba(255, 255, 255, 0.15)` opacity
+
+#### Shadow System
+
+| Variable | Usage |
+|---------|-------|
+| `--shadow-sm` | Small elements, inputs |
+| `--shadow-md` | Cards, panels |
+| `--shadow-lg` | Modals, hero sections |
+
+#### Transitions
+
+- **Standard**: `0.25s ease` for most interactive elements
+- **Smooth**: `0.35s ease` for panel transitions
+- **Emphasis**: `0.5s ease` for page content
+- **Cubic Bezier**: `cubic-bezier(0.16, 1, 0.3, 1)` for natural motion
 
 ---
 
@@ -255,7 +389,7 @@ Use `npm run lint` or other npm scripts if configured.
 
 ## Testing & Quality
 
-- **Backend tests**: Use Django’s `manage.py test` when available. Focus on appointment serializer validation, viewset permissions, and notification dispatch logic.
+- **Backend tests**: Use Django's `manage.py test` when available. Focus on appointment serializer validation, viewset permissions, and notification dispatch logic.
 - **Frontend tests**: Add Jest/React Testing Library tests for components, if introduced. (Currently the repo relies on manual QA.)
 - **Linting**: Run `npm run lint` for frontend and adopt `ruff` or `flake8` for backend if added later.
 

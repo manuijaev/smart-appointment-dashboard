@@ -31,6 +31,9 @@ export default function Navbar() {
           <NavLink to="/staff/login" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
             Login
           </NavLink>
+          <NavLink to="/admin/signup" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+            Admin Sign Up
+          </NavLink>
         </div>
       </div>
       <div className={`top-nav-mobile ${mobileOpen ? 'open' : ''}`}>
@@ -39,6 +42,9 @@ export default function Navbar() {
         </NavLink>
         <NavLink to="/staff/login" onClick={() => setMobileOpen(false)} className="nav-link">
           Login
+        </NavLink>
+        <NavLink to="/admin/signup" onClick={() => setMobileOpen(false)} className="nav-link">
+          Admin Sign Up
         </NavLink>
       </div>
     </nav>
