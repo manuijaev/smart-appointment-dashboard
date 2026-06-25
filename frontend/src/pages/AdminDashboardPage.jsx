@@ -104,6 +104,22 @@ function generatePassword() {
   return Array.from({ length: 10 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
+function formatApiError(err) {
+  const data = err?.response?.data;
+  if (!data) return 'An error occurred.';
+  if (typeof data.detail === 'string') return data.detail;
+  if (Array.isArray(data.detail)) return data.detail.join(' ');
+  if (typeof data === 'object') {
+    return Object.entries(data)
+      .map(([field, messages]) => {
+        const text = Array.isArray(messages) ? messages.join(', ') : String(messages);
+        return `${field}: ${text}`;
+      })
+      .join(' ');
+  }
+  return 'An error occurred.';
+}
+
 function Badge({ role }) {
   const colors = { Admin: 'badge-amber', Staff: 'badge-cyan' };
   return <span className={`badge ${colors[role] || 'badge-muted'}`}>{role}</span>;
@@ -260,7 +276,6 @@ export default function AdminDashboardPage() {
     password: generatePassword(),
     phone: '',
   });
-  const [showPassword, setShowPassword] = useState(false);
   const [isLoadingStaff, setIsLoadingStaff] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
   const [staffSearch, setStaffSearch] = useState('');
@@ -387,7 +402,6 @@ export default function AdminDashboardPage() {
       password: generatePassword(),
       phone: '',
     });
-    setShowPassword(false);
     setShowStaffModal(true);
   };
 
@@ -414,12 +428,12 @@ export default function AdminDashboardPage() {
     try {
       if (editingStaffId) {
         const payload = {
-          full_name: staffForm.full_name,
-          email: staffForm.email,
+          full_name: staffForm.full_name.trim(),
+          email: staffForm.email.trim(),
           role: staffForm.role,
-          department: staffForm.department || null,
-          division: staffForm.division || null,
-          phone: staffForm.phone || '',
+          department: staffForm.department ? Number(staffForm.department) : null,
+          division: staffForm.division ? Number(staffForm.division) : null,
+          phone: staffForm.phone.trim(),
         };
         const newPassword = staffForm.password?.trim();
         if (newPassword) {
@@ -429,20 +443,20 @@ export default function AdminDashboardPage() {
         showToast('Staff member updated.');
       } else {
         const response = await api.post('/staff/create/', {
-          full_name: staffForm.full_name,
-          email: staffForm.email,
+          full_name: staffForm.full_name.trim(),
+          email: staffForm.email.trim().toLowerCase(),
           role: staffForm.role,
-          department: staffForm.department,
-          division: staffForm.division,
-          password: staffForm.password,
-          phone: staffForm.phone,
+          department: Number(staffForm.department),
+          division: Number(staffForm.division),
+          password: staffForm.password.trim(),
+          phone: staffForm.phone.trim(),
         });
-        showToast(`Account created. Temp password: ${response.data.temp_password}`);
+        showToast(`Account created. Temp password: ${response.data.temp_password || staffForm.password}`);
       }
       setShowStaffModal(false);
       await loadData();
     } catch (err) {
-      showToast(err.response?.data?.detail || 'An error occurred.', 'error');
+      showToast(formatApiError(err), 'error');
     } finally {
       setIsLoadingStaff(false);
     }
@@ -1620,26 +1634,9 @@ export default function AdminDashboardPage() {
                       style={{ flex: 1, minWidth: '200px', fontFamily: 'monospace', letterSpacing: '0.1em' }} 
                       value={staffForm.password} 
                       onChange={(e) => setStaffForm(f => ({ ...f, password: e.target.value }))} 
-                      type={showPassword ? 'text' : 'password'} 
+                      type="text"
+                      autoComplete="off"
                     />
-                    <button 
-                      className="btn btn-ghost" 
-                      style={{ padding: '8px', minWidth: '36px' }} 
-                      onClick={() => setShowPassword(!showPassword)}
-                      title={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showPassword ? (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                          <line x1="1" y1="1" x2="23" y2="23"></line>
-                        </svg>
-                      ) : (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                          <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                      )}
-                    </button>
                     <button 
                       className="btn btn-ghost" 
                       style={{ padding: '8px', minWidth: '36px' }} 
@@ -1728,27 +1725,10 @@ export default function AdminDashboardPage() {
                     style={{ flex: 1, minWidth: '200px', fontFamily: 'monospace', letterSpacing: '0.1em' }} 
                     value={staffForm.password} 
                     onChange={(e) => setStaffForm(f => ({ ...f, password: e.target.value }))}
-                    type={showPassword ? 'text' : 'password'} 
+                    type={editingStaffId ? 'password' : 'text'}
+                    autoComplete="off"
                     placeholder={editingStaffId ? 'Leave blank to keep current password' : undefined}
                   />
-                  <button 
-                    className="btn btn-ghost" 
-                    style={{ padding: '8px', minWidth: '36px' }} 
-                    onClick={() => setShowPassword(!showPassword)}
-                    title={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                        <line x1="1" y1="1" x2="23" y2="23"></line>
-                      </svg>
-                    ) : (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                      </svg>
-                    )}
-                  </button>
                   <button 
                     className="btn btn-ghost" 
                     style={{ padding: '8px', minWidth: '36px' }} 

@@ -99,7 +99,7 @@ class StaffCreateSerializer(serializers.ModelSerializer):
     Serializer for admin to create staff accounts.
     Generates a temporary password and can send welcome email.
     """
-    password = serializers.CharField(write_only=True, min_length=8, required=False)
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
     send_welcome_email = serializers.BooleanField(default=False, write_only=True)
 
     class Meta:
@@ -124,15 +124,21 @@ class StaffCreateSerializer(serializers.ModelSerializer):
     def get_temp_password(self):
         return self._temp_password
 
+    def validate_password(self, value):
+        if value and len(value) < 8:
+            raise serializers.ValidationError('Password must be at least 8 characters.')
+        return value
+
     def validate(self, attrs):
         department = attrs.get('department')
         division = attrs.get('division')
         if department and division and division.department_id != department.id:
             raise serializers.ValidationError({'division': 'Selected division does not belong to this department.'})
-        # Generate temp password if not provided
-        if not attrs.get('password'):
-            self._temp_password = self._generate_temp_password()
-            attrs['password'] = self._temp_password
+        password = (attrs.get('password') or '').strip()
+        if not password:
+            password = self._generate_temp_password()
+        self._temp_password = password
+        attrs['password'] = password
         return attrs
 
     def _generate_temp_password(self):
